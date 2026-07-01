@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - El Empanadar de Bebeto</title>
+    <link rel="shortcut icon" href="/imagen/logo-trans.png" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <img src="/imagen/logo-trans.png" alt="Logo El Empanadar de Bebeto">
+            <span class="logo-nombre">El Empanadar de Bebeto</span>
+        </div>
+        <button class="hamburger" id="hamburger-btn" aria-label="Menú">☰</button>
+        <nav class="nav" id="nav-menu">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="#">Redes</a></li>
+                <li><a href="carrito.html">Carrito</a></li>
+                <li><a href="#">Ubicación</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="contenedor">
+        <h1>Administrar Productos</h1>
+        <div class="tasa-info" id="tasa-info">Cargando tasa del día...</div>
+        <form id="producto-form" enctype="multipart/form-data">
+            <input type="hidden" id="edit-id">
+            <input type="text" id="nombre" placeholder="Nombre" required>
+            <input type="number" step="0.01" id="precio" placeholder="Precio USD" required>
+            <textarea id="caracteristica" placeholder="Característica" required></textarea>
+            <input type="file" id="imagen-file" accept="image/*" onchange="previsualizarImagen(event)">
+            <div class="preview" id="preview-container" style="display:none;">
+                <img id="preview-img" src="" alt="Previsualización">
+            </div>
+            <button type="submit">Guardar producto</button>
+        </form>
+        <div id="mensaje-error" style="color:#f88; margin-bottom:10px; display:none;"></div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Img</th>
+                    <th>Nombre</th>
+                    <th>USD</th>
+                    <th>Bs</th>
+                    <th>Característica</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="productos-body"></tbody>
+        </table>
+        <a href="carrito.html" class="volver">← Ir al carrito</a>
+    </div>
+
+    <script>
+        // Hamburger menu
+        const hamburger = document.getElementById('hamburger-btn');
+        const navMenu = document.getElementById('nav-menu');
+        hamburger.addEventListener('click', () => {
+            navMenu.classList.toggle('activo');
+        });
+        navMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('activo');
+            });
+        });
+
+        // ─── Admin logic ───
+        let tasaBCV = null;
+        const API = '/api/productos';
+
+        async function obtenerTasa() {
+            try {
+                const resp = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+                const data = await resp.json();
+                const tasa = data.promedio ?? data.tasa ?? data.rate ??
+                             data.oficial?.precio ?? data.oficial?.promedio ?? null;
+                if (typeof tasa === 'number' && tasa > 0) {
+                    tasaBCV = tasa;
+                    document.getElementById('tasa-info').textContent = `Tasa BCV: Bs ${tasaBCV.toFixed(2)}`;
+                    return;
+                }
+            } catch {}
+            document.getElementById('tasa-info').textContent = 'Tasa BCV no disponible';
+        }
+
+        function formatearBs(usd) {
+            if (tasaBCV === null) return 'Bs --';
+            return `Bs ${(usd * tasaBCV).toFixed(2)}`;
+        }
+
+        function mostrarError(msg) {
+            const el = document.getElementById('mensaje-error');
+            el.textContent = '❌ ' + msg;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 5000);
+        }
+
+        async function cargarProductos() {
+            const res = await fetch(API);
+            const productos = await res.json();
+            const tbody = document.getElementById('productos-body');
+            tbody.innerHTML = productos.map(p => `
+                <tr>
+                    <td>${p.imagen ? `<img class="img-miniatura" src="${p.imagen}" alt="${p.nombre}">` : '—'}</td>
+                    <td>${p.nombre}</td>
+                    <td>$${p.precio_usd.toFixed(2)}</td>
+                    <td class="precio-bs">${formatearBs(p.precio_usd)}</td>
+                    <td>${p.caracteristica}</td>
+                    <td>
+                        <button class="btn-editar" onclick="editarProducto(${p.id})">Editar</button>
+                        <button class="btn-eliminar" onclick="eliminarProducto(${p.id})">Eliminar</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('producto-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const formData = new FormData();
+            formData.append('nombre', document.getElementById('nombre').value.trim());
+            formData.append('precio_usd', document.getElementById('precio').value);
+            formData.append('caracteristica', document.getElementById('caracteristica').value.trim());
+            const imagenInput = document.getElementById('imagen-file');
+            if (imagenInput.files.length > 0) {
+                formData.append('imagen', imagenInput.files[0]);
+            }
+
+            const url = id ? `${API}/${id}` : API;
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, { method, body: formData });
+                const data = await res.json();
+                if (res.ok) {
+                    cargarProductos();
+                    document.getElementById('producto-form').reset();
+                    document.getElementById('edit-id').value = '';
+                    document.getElementById('preview-container').style.display = 'none';
+                } else {
+                    mostrarError(data.error || 'Error desconocido');
+                }
+            } catch {
+                mostrarError('No se pudo conectar con el servidor');
+            }
+        });
+
+        async function editarProducto(id) {
+            try {
+                const res = await fetch(API);
+                const productos = await res.json();
+                const p = productos.find(pr => pr.id == id);
+                if (p) {
+                    document.getElementById('edit-id').value = p.id;
+                    document.getElementById('nombre').value = p.nombre;
+                    document.getElementById('precio').value = p.precio_usd;
+                    document.getElementById('caracteristica').value = p.caracteristica;
+                    document.getElementById('imagen-file').value = '';
+                    const previewContainer = document.getElementById('preview-container');
+                    const previewImg = document.getElementById('preview-img');
+                    if (p.imagen) {
+                        previewImg.src = p.imagen;
+                        previewContainer.style.display = 'block';
+                    } else {
+                        previewContainer.style.display = 'none';
+                    }
+                }
+            } catch {
+                mostrarError('Error al cargar los productos');
+            }
+        }
+
+        async function eliminarProducto(id) {
+            if (!confirm('¿Eliminar este producto?')) return;
+            try {
+                await fetch(`${API}/${id}`, { method: 'DELETE' });
+                cargarProductos();
+            } catch {
+                mostrarError('Error al eliminar');
+            }
+        }
+
+        function previsualizarImagen(event) {
+            const file = event.target.files[0];
+            const previewContainer = document.getElementById('preview-container');
+            const previewImg = document.getElementById('preview-img');
+            if (file) {
+                if (!file.type.startsWith('image/')) {
+                    mostrarError('El archivo seleccionado no es una imagen válida');
+                    event.target.value = '';
+                    previewContainer.style.display = 'none';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = e => {
+                    previewImg.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                previewContainer.style.display = 'none';
+            }
+        }
+
+        obtenerTasa();
+        cargarProductos();
+    </script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrito - El Empanadar de Bebeto</title>
+    <link rel="shortcut icon" href="/imagen/logo-trans.png" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <img src="/imagen/logo-trans.png" alt="Logo El Empanadar de Bebeto">
+            <span class="logo-nombre">El Empanadar de Bebeto</span>
+        </div>
+        <button class="hamburger" id="hamburger-btn" aria-label="Menú">☰</button>
+        <nav class="nav" id="nav-menu">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="#">Redes</a></li>
+                <li><a href="carrito.html">Carrito</a></li>
+                <li><a href="#">Ubicación</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="contenedor">
+        <h1>Selecciona tus productos</h1>
+        <div class="tasa-info" id="tasa-info">Cargando tasa del día...</div>
+    </div>
+
+    <div class="productos-grid-carrito" id="productos-lista" style="padding: 0 8px;"></div>
+
+    <button class="btn-flotante-carrito" onclick="toggleCarritoPanel()">
+        🛒
+        <span class="contador-flotante" id="contador-flotante" style="display:none;">0</span>
+    </button>
+
+    <div class="carrito-overlay" id="carrito-overlay">
+        <div class="carrito-panel">
+            <div class="carrito-panel-header">
+                🧾 Tu pedido
+                <div style="display:flex; gap:10px;">
+                    <button onclick="vaciarCarrito()" style="background:#c0392b; color:white; border:none; padding:4px 10px; border-radius:8px; font-size:0.8rem; cursor:pointer;">Vaciar</button>
+                    <button onclick="toggleCarritoPanel()" style="background:none; border:none; color:var(--gris-claro); font-size:1.5rem; cursor:pointer;">✕</button>
+                </div>
+            </div>
+            <div class="carrito-lista" id="carrito-lista"><p style="text-align:center; color:#888;">No hay productos en el carrito</p></div>
+            <div class="carrito-total" id="carrito-total">Total: $0.00</div>
+            <div class="datos-cliente">
+                <input type="text" id="cliente-nombre" placeholder="Nombre">
+                <input type="text" id="cliente-apellido" placeholder="Apellido">
+                <input type="text" id="cliente-direccion" placeholder="Dirección">
+                <select id="cliente-pago">
+                    <option value="">Método de pago</option>
+                    <option value="Pago Móvil">Pago Móvil</option>
+                    <option value="Binance">Binance</option>
+                    <option value="Punto">Punto</option>
+                    <option value="Efectivo Bs">Efectivo Bs</option>
+                    <option value="Efectivo $">Efectivo $</option>
+                </select>
+            </div>
+            <button class="btn-enviar-whatsapp" onclick="enviarWhatsApp()">
+                <img src="/imagen/what.png" alt="WhatsApp">
+                Enviar pedido por WhatsApp
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Hamburger menu
+        const hamburger = document.getElementById('hamburger-btn');
+        const navMenu = document.getElementById('nav-menu');
+        hamburger.addEventListener('click', () => {
+            navMenu.classList.toggle('activo');
+        });
+        navMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('activo');
+            });
+        });
+
+        // ─── Lógica del carrito ───
+        let tasaBCV = null;
+        let carrito = [];
+        const API = '/api/productos';
+
+        async function obtenerTasa() {
+            try {
+                const resp = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+                const data = await resp.json();
+                const tasa = data.promedio ?? data.tasa ?? data.rate ??
+                             data.oficial?.precio ?? data.oficial?.promedio ?? null;
+                if (typeof tasa === 'number' && tasa > 0) {
+                    tasaBCV = tasa;
+                    document.getElementById('tasa-info').textContent = `Tasa BCV: Bs ${tasaBCV.toFixed(2)}`;
+                    return;
+                }
+            } catch (e) {
+                console.warn('Error al obtener tasa:', e);
+            }
+            document.getElementById('tasa-info').innerHTML = 'Tasa BCV no disponible <small>(precios solo en USD)</small>';
+        }
+
+        function formatearBs(usd) {
+            if (tasaBCV === null || isNaN(usd)) return 'Bs --';
+            return `Bs ${(usd * tasaBCV).toFixed(2)}`;
+        }
+
+        async function cargarProductos() {
+            try {
+                const res = await fetch(API);
+                const productos = await res.json();
+                const contenedor = document.getElementById('productos-lista');
+                if (productos.length === 0) {
+                    contenedor.innerHTML = '<p style="text-align:center; color:#888; padding:20px;">No hay productos. Agregá desde <a href="admin.html" style="color:var(--vinotinto-claro);">Admin</a></p>';
+                    return;
+                }
+                contenedor.innerHTML = productos.map(p => `
+                    <div class="producto-card-carrito">
+                        ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}">` : '<div style="height:110px; background:#333; display:flex; align-items:center; justify-content:center; color:#888;">Sin foto</div>'}
+                        <div class="producto-body">
+                            <div class="producto-nombre">${p.nombre}</div>
+                            <div class="producto-desc">${p.caracteristica}</div>
+                            <div class="precio-usd">$${p.precio_usd.toFixed(2)}</div>
+                            <div class="precio-bs">${formatearBs(p.precio_usd)}</div>
+                            <button class="btn-agregar" onclick="agregarAlCarrito(${p.id})">Agregar</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch {
+                document.getElementById('productos-lista').innerHTML = '<p style="text-align:center; color:#f88;">Error al cargar productos</p>';
+            }
+        }
+
+        function agregarAlCarrito(id) {
+            const productoCard = document.querySelector(`.producto-card-carrito .btn-agregar[onclick="agregarAlCarrito(${id})"]`)?.closest('.producto-card-carrito');
+            if (!productoCard) return;
+            const nombre = productoCard.querySelector('.producto-nombre').textContent;
+            const precio = parseFloat(productoCard.querySelector('.precio-usd').textContent.replace('$', ''));
+            const imagen = productoCard.querySelector('img')?.src || null;
+            const existente = carrito.find(item => item.id === id);
+            if (existente) {
+                existente.cantidad++;
+            } else {
+                carrito.push({ id, nombre, precio_usd: precio, cantidad: 1, imagen });
+            }
+            actualizarPanelCarrito();
+        }
+
+        function aumentarCantidad(id) {
+            const item = carrito.find(i => i.id === id);
+            if (item) { item.cantidad++; actualizarPanelCarrito(); }
+        }
+
+        function disminuirCantidad(id) {
+            const item = carrito.find(i => i.id === id);
+            if (item) {
+                item.cantidad--;
+                if (item.cantidad <= 0) carrito = carrito.filter(i => i.id !== id);
+                actualizarPanelCarrito();
+            }
+        }
+
+        function eliminarItem(id) {
+            carrito = carrito.filter(i => i.id !== id);
+            actualizarPanelCarrito();
+        }
+
+        function vaciarCarrito() {
+            if (carrito.length === 0) return;
+            if (confirm('¿Seguro que querés vaciar el carrito?')) {
+                carrito = [];
+                actualizarPanelCarrito();
+            }
+        }
+
+        function actualizarPanelCarrito() {
+            const listaEl = document.getElementById('carrito-lista');
+            const totalEl = document.getElementById('carrito-total');
+            const contadorEl = document.getElementById('contador-flotante');
+
+            const totalItems = carrito.reduce((s, i) => s + i.cantidad, 0);
+            contadorEl.textContent = totalItems;
+            contadorEl.style.display = totalItems > 0 ? 'flex' : 'none';
+
+            if (carrito.length === 0) {
+                listaEl.innerHTML = '<p style="text-align:center; color:#888;">No hay productos en el carrito</p>';
+                totalEl.innerHTML = 'Total: $0.00';
+                return;
+            }
+
+            listaEl.innerHTML = carrito.map(item => {
+                const subtotal = item.precio_usd * item.cantidad;
+                return `
+                    <div class="carrito-item-panel" style="flex-direction:column; gap:6px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span class="carrito-item-nombre">${item.nombre}</span>
+                            <button onclick="eliminarItem(${item.id})" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:1.1rem;">🗑️</button>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button onclick="disminuirCantidad(${item.id})" style="background:#444; color:white; border:none; width:26px; height:26px; border-radius:50%; font-size:0.9rem;">−</button>
+                            <span style="font-weight:bold;">${item.cantidad}</span>
+                            <button onclick="aumentarCantidad(${item.id})" style="background:#444; color:white; border:none; width:26px; height:26px; border-radius:50%; font-size:0.9rem;">+</button>
+                            <span class="carrito-item-precio" style="margin-left:auto;">$${subtotal.toFixed(2)}<br><small>${formatearBs(subtotal)}</small></span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const totalUSD = carrito.reduce((s, i) => s + i.precio_usd * i.cantidad, 0);
+            totalEl.innerHTML = `Total: $${totalUSD.toFixed(2)}<br><small>${formatearBs(totalUSD)}</small>`;
+        }
+
+        function toggleCarritoPanel() {
+            document.getElementById('carrito-overlay').classList.toggle('activo');
+        }
+
+        function enviarWhatsApp() {
+            if (carrito.length === 0) {
+                alert('Agregá productos al carrito');
+                return;
+            }
+            const nombre = document.getElementById('cliente-nombre').value.trim();
+            const apellido = document.getElementById('cliente-apellido').value.trim();
+            const direccion = document.getElementById('cliente-direccion').value.trim();
+            const pago = document.getElementById('cliente-pago').value;
+
+            let mensaje = '*Mi pedido*\n\n';
+            carrito.forEach(item => {
+                const subtotal = item.precio_usd * item.cantidad;
+                mensaje += `- ${item.nombre} x${item.cantidad} $${subtotal.toFixed(2)}`;
+                if (tasaBCV) mensaje += ` (${formatearBs(subtotal)})`;
+                mensaje += '\n';
+            });
+            const total = carrito.reduce((s, i) => s + i.precio_usd * i.cantidad, 0);
+            mensaje += `\n*Total a pagar: $${total.toFixed(2)}*`;
+            if (tasaBCV) mensaje += ` (${formatearBs(total)})`;
+            mensaje += '\n';
+
+            if (nombre || apellido) mensaje += `\n*Nombre:* ${nombre} ${apellido}`.trim() + '\n';
+            if (direccion) mensaje += `*Dirección:* ${direccion}\n`;
+            if (pago) mensaje += `*Método de pago:* ${pago}\n`;
+
+            window.open(`https://wa.me/584264617572?text=${encodeURIComponent(mensaje)}`, '_blank');
+        }
+
+        (async function iniciar() {
+            await obtenerTasa();
+            await cargarProductos();
+            actualizarPanelCarrito();
+        })();
+    </script>
+</body>
+</html>

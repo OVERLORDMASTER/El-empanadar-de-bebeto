@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Empanadar de Bebeto</title>
+    <link rel="shortcut icon" href="/imagen/logo-trans.png" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <img src="/imagen/logo-trans.png" alt="Logo El Empanadar de Bebeto">
+            <span class="logo-nombre">El Empanadar de Bebeto</span>
+        </div>
+        <button class="hamburger" id="hamburger-btn" aria-label="Menú">☰</button>
+        <nav class="nav" id="nav-menu">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="#">Redes</a></li>
+                <li><a href="carrito.html">Carrito</a></li>
+                <li><a href="#">Ubicación</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="hero-texto">
+                <img class="empa" src="/imagen/logo-trans.png" alt="logcenter">
+                <h1>Las empanadas de Bebeto</h1>
+                <p>Masa casera, doradita y crocante. Rellenos bien cargados. El sabor que nos hace felices.</p>
+            </div>
+        </section>
+
+        <br>
+
+        <section class="seccion conocenos" id="conocenos">
+            <h2 class="seccion-titulo">Conócenos</h2>
+            <div class="conocenos-contenido">
+                <div class="conocenos-texto">
+                    <p>En <strong>El Empanadar de Bebeto</strong> llevamos más de 15 años preparando las empanadas más sabrosas del barrio. Nuestra historia comenzó en la cocina de la abuela Bebeto, donde cada pliegue de la masa encerraba un secreto familiar.</p>
+                    <p>Hoy, honramos esa tradición usando <strong>ingredientes frescos</strong>, masa artesanal y ese toque casero que nos distingue. Cada empanada es preparada a mano, horneada hasta el punto justo de crocancia y rellena con generosidad.</p>
+                    <p>Nos enorgullece ser parte de tu mesa y acompañar tus momentos especiales con <strong>el auténtico sabor de las empanadas de siempre</strong>.</p>
+                </div>
+                <div class="conocenos-imagen">
+                    <img src="/imagen/cocina.jpg" alt="Nuestra cocina artesanal">
+                </div>
+            </div>
+        </section>
+
+        <section class="seccion productos-destacados" id="productos">
+            <h2 class="seccion-titulo">Nuestras Especialidades</h2>
+            <div class="productos-grid">
+                <div class="producto-card">
+                    <img src="/imagen/empanada-carne.jpg" alt="Empanada de carne">
+                    <div class="producto-info">
+                        <h3>Empanada de Carne</h3>
+                        <p>Carne de res sazonada con cebolla, huevo duro y aceitunas. Un clásico irresistible.</p>
+                    </div>
+                </div>
+                <div class="producto-card">
+                    <img src="/imagen/empanada-pollo.jpg" alt="Empanada de pollo">
+                    <div class="producto-info">
+                        <h3>Empanada de Pollo</h3>
+                        <p>Pollo desmenuzado con salsa blanca, morrón y cebolla de verdeo. Cremosa y sabrosa.</p>
+                    </div>
+                </div>
+                <div class="producto-card">
+                    <img src="/imagen/empanada-jyq.jpg" alt="Empanada de jamón y queso">
+                    <div class="producto-info">
+                        <h3>Jamón y Queso</h3>
+                        <p>Jamón cocido y queso mozzarella que se derrite en cada mordida. Perfecta para chicos y grandes.</p>
+                    </div>
+                </div>
+                <div class="producto-card">
+                    <img src="/imagen/empanada-humita.jpg" alt="Empanada de humita">
+                    <div class="producto-info">
+                        <h3>Empanada de Humita</h3>
+                        <p>Choclo cremoso con cebolla, pimiento y un toque de nuez moscada. Dulzura y tradición.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="seccion ubicacion" id="ubicacion">
+            <h2 class="seccion-titulo">Encuéntranos</h2>
+            <div class="ubicacion-contenido">
+                <div class="ubicacion-info">
+                    <p><strong>📍 Dirección:</strong> Calle Los Sabores #123, entre Av. Principal y Calle del Horno, Barrio La Cocina, Caracas, Venezuela.</p>
+                    <p><strong>🕒 Horario:</strong> Lunes a Sábado de 10:00 a 21:00 | Domingos de 11:00 a 18:00</p>
+                    <p><strong>📞 Teléfono:</strong> +58 424-5026456</p>
+                    <p>¡Ven a visitarnos o haz tu pedido para llevar! Estamos a solo unos pasos de la plaza principal.</p>
+                </div>
+                <div class="ubicacion-mapa">
+                    <span>🗺️ Mapa próximamente</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        © 2026 El Empanadar de Bebeto · Hecho con amor y mucho horno
+    </footer>
+
+    <script>
+        const hamburger = document.getElementById('hamburger-btn');
+        const navMenu = document.getElementById('nav-menu');
+        hamburger.addEventListener('click', () => {
+            navMenu.classList.toggle('activo');
+        });
+        navMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('activo');
+            });
+        });
+    </script>
+</body>
+</html>
