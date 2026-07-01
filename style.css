@@ -162,12 +162,27 @@ body {
     max-width: 90%;
 }
 
-.empa{
-
+/* Imagen con clase .empa responsiva */
+.empa {
     position: relative;
     text-align: center;
-    width: 500px;
+    width: 100%;           /* Se adapta al ancho del contenedor */
+    max-width: 500px;      /* Nunca supera los 500px originales */
+    margin: 0 auto;        /* Centrado */
+}
 
+.empa img {
+    width: 100%;
+    height: auto;          /* Mantiene la proporción */
+    display: block;
+    border-radius: 10px;   /* Opcional, para mantener estilo */
+}
+
+/* Ajuste extra para pantallas muy pequeñas */
+@media (max-width: 400px) {
+    .empa {
+        max-width: 280px;
+    }
 }
 
 .hero-texto h1 {
