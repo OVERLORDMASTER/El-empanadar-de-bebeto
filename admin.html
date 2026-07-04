@@ -7,8 +7,8 @@
     <link rel="shortcut icon" href="/imagen/logo-trans.png" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <!-- ═══ HEADER UNIFICADO ═══ -->
+<body id="admin-body" class="login-page">
+    <!-- Header unificado -->
     <header class="header">
         <div class="logo">
             <img src="/imagen/logo-trans.png" alt="Logo El Empanadar de Bebeto">
@@ -25,7 +25,7 @@
         </nav>
     </header>
 
-    <!-- ═══ OVERLAY DE REDES SOCIALES ═══ -->
+    <!-- Overlay redes sociales -->
     <div class="redes-overlay" id="redes-overlay">
         <button class="redes-cerrar" id="redes-cerrar">&times;</button>
         <div class="redes-grid">
@@ -44,8 +44,22 @@
         </div>
     </div>
 
-    <!-- ═══ CONTENIDO ADMIN ═══ -->
-    <div class="contenedor admin-contenedor">
+    <!-- ═══ LOGIN WRAPPER (con fondo de hero) ═══ -->
+    <div class="login-wrapper" id="login-wrapper">
+        <div class="login-box">
+            <h2>🔐 Acceso restringido</h2>
+            <p class="login-sub">Ingresa tus credenciales para continuar</p>
+            <div class="login-input-group">
+                <input type="text" id="login-user" placeholder="Usuario" autocomplete="username">
+                <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password">
+                <div id="login-error" class="login-error" style="display:none;">❌ Usuario o contraseña incorrectos</div>
+                <button id="login-btn" class="login-btn">Ingresar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CONTENIDO ADMIN (oculto hasta login) ═══ -->
+    <div class="contenedor admin-contenedor" id="admin-content" style="display:none;">
         <h1>Administrar Productos</h1>
         <div class="tasa-info" id="tasa-info">Cargando tasa del día...</div>
         <form id="producto-form" enctype="multipart/form-data">
@@ -53,7 +67,13 @@
             <input type="text" id="nombre" placeholder="Nombre" required>
             <input type="number" step="0.01" id="precio" placeholder="Precio USD" required>
             <textarea id="caracteristica" placeholder="Característica" required></textarea>
-            <input type="file" id="imagen-file" accept="image/*" onchange="previsualizarImagen(event)">
+
+            <div class="file-upload-wrapper">
+                <label for="imagen-file" class="file-upload-label">Seleccionar archivo</label>
+                <input type="file" id="imagen-file" accept="image/*" onchange="previsualizarImagen(event)">
+                <span id="file-name">Sin archivos seleccionados</span>
+            </div>
+
             <div class="preview" id="preview-container" style="display:none;">
                 <img id="preview-img" src="" alt="Previsualización">
             </div>
@@ -80,6 +100,54 @@
     </div>
 
     <script>
+        // ═══ CREDENCIALES ═══
+        const USUARIO_VALIDO = 'admin';
+        const CONTRASENA_VALIDA = 'admin123';
+
+        // ═══ ELEMENTOS ═══
+        const loginWrapper = document.getElementById('login-wrapper');
+        const adminContent = document.getElementById('admin-content');
+        const loginBtn = document.getElementById('login-btn');
+        const loginUser = document.getElementById('login-user');
+        const loginPass = document.getElementById('login-pass');
+        const loginError = document.getElementById('login-error');
+        const adminBody = document.getElementById('admin-body');
+
+        // ═══ FUNCIÓN LOGIN ═══
+        function intentarLogin() {
+            const usuario = loginUser.value.trim();
+            const contrasena = loginPass.value.trim();
+
+            if (usuario === USUARIO_VALIDO && contrasena === CONTRASENA_VALIDA) {
+                loginError.style.display = 'none';
+                loginWrapper.style.display = 'none';
+                adminContent.style.display = 'block';
+                // Quitar fondo de hero del body
+                adminBody.classList.remove('login-page');
+                // Iniciar admin
+                iniciarAdmin();
+            } else {
+                loginError.style.display = 'block';
+                loginUser.value = '';
+                loginPass.value = '';
+                loginUser.focus();
+            }
+        }
+
+        loginBtn.addEventListener('click', intentarLogin);
+        loginPass.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                intentarLogin();
+            }
+        });
+        loginUser.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                loginPass.focus();
+            }
+        });
+
         // ═══ MENÚ HAMBURGUESA ═══
         const hamburger = document.getElementById('hamburger-btn');
         const navMenu = document.getElementById('nav-menu');
@@ -92,7 +160,7 @@
             });
         });
 
-        // ═══ MODAL DE REDES SOCIALES ═══
+        // ═══ MODAL REDES ═══
         const btnRedes = document.getElementById('btn-redes');
         const overlayRedes = document.getElementById('redes-overlay');
         const btnCerrarRedes = document.getElementById('redes-cerrar');
@@ -101,22 +169,19 @@
             e.preventDefault();
             overlayRedes.classList.add('activo');
         });
-
         btnCerrarRedes.addEventListener('click', () => {
             overlayRedes.classList.remove('activo');
         });
-
         overlayRedes.addEventListener('click', (e) => {
             if (e.target === overlayRedes) {
                 overlayRedes.classList.remove('activo');
             }
         });
 
-        // ═══ LÓGICA DE ADMIN (CRUD) ═══
+        // ═══ LÓGICA ADMIN (CRUD) ═══
         let tasaBCV = null;
         const API = '/api/productos';
 
-        // Obtener tasa (con fallback para mostrar Bs siempre)
         async function obtenerTasa() {
             try {
                 const resp = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
@@ -131,8 +196,6 @@
             } catch (e) {
                 console.warn('Error al obtener tasa de dolarapi:', e);
             }
-
-            // Fallback: intentar con bcv-api
             try {
                 const resp = await fetch('https://api.bcv-api.xyz/v1/dolar');
                 const data = await resp.json();
@@ -145,8 +208,6 @@
             } catch (e) {
                 console.warn('Error al obtener tasa de bcv-api:', e);
             }
-
-            // Último fallback
             tasaBCV = 650.00;
             document.getElementById('tasa-info').textContent = `⚠️ Tasa estimada: Bs ${tasaBCV.toFixed(2)} (recarga para actualizar)`;
         }
@@ -212,6 +273,7 @@
                     document.getElementById('producto-form').reset();
                     document.getElementById('edit-id').value = '';
                     document.getElementById('preview-container').style.display = 'none';
+                    document.getElementById('file-name').textContent = 'Sin archivos seleccionados';
                 } else {
                     mostrarError(data.error || 'Error desconocido');
                 }
@@ -233,11 +295,14 @@
                     document.getElementById('imagen-file').value = '';
                     const previewContainer = document.getElementById('preview-container');
                     const previewImg = document.getElementById('preview-img');
+                    const fileNameSpan = document.getElementById('file-name');
                     if (p.imagen) {
                         previewImg.src = p.imagen;
                         previewContainer.style.display = 'block';
+                        fileNameSpan.textContent = 'Imagen actual';
                     } else {
                         previewContainer.style.display = 'none';
+                        fileNameSpan.textContent = 'Sin archivos seleccionados';
                     }
                 }
             } catch {
@@ -259,13 +324,17 @@
             const file = event.target.files[0];
             const previewContainer = document.getElementById('preview-container');
             const previewImg = document.getElementById('preview-img');
+            const fileNameSpan = document.getElementById('file-name');
+
             if (file) {
                 if (!file.type.startsWith('image/')) {
                     mostrarError('El archivo seleccionado no es una imagen válida');
                     event.target.value = '';
                     previewContainer.style.display = 'none';
+                    fileNameSpan.textContent = 'Sin archivos seleccionados';
                     return;
                 }
+                fileNameSpan.textContent = file.name;
                 const reader = new FileReader();
                 reader.onload = e => {
                     previewImg.src = e.target.result;
@@ -274,14 +343,14 @@
                 reader.readAsDataURL(file);
             } else {
                 previewContainer.style.display = 'none';
+                fileNameSpan.textContent = 'Sin archivos seleccionados';
             }
         }
 
-        // ═══ INICIO CORREGIDO: esperar a que la tasa esté lista ═══
-        (async function iniciar() {
-            await obtenerTasa();        // <--- AHORA SÍ esperamos
-            await cargarProductos();    // <--- se ejecuta después de tener la tasa
-        })();
+        async function iniciarAdmin() {
+            await obtenerTasa();
+            await cargarProductos();
+        }
     </script>
 </body>
 </html>
