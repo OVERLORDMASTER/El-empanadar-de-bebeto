@@ -17,20 +17,43 @@
         <nav class="nav" id="nav-menu">
             <ul>
                 <li><a href="index.html">Inicio</a></li>
-                <li><a href="#">Redes</a></li>
+                <li><a href="#" id="btn-redes">Redes</a></li>
                 <li><a href="carrito.html">Carrito</a></li>
-                <li><a href="#">Ubicación</a></li>
+                <li><a href="index.html#ubicacion">Ubicación</a></li> <!-- 🔁 ahora redirige al index + ancla -->
             </ul>
         </nav>
     </header>
 
+    <!-- ═══ OVERLAY DE REDES SOCIALES (igual que en index) ═══ -->
+    <div class="redes-overlay" id="redes-overlay">
+        <button class="redes-cerrar" id="redes-cerrar">&times;</button>
+        <div class="redes-grid">
+            <a href="https://facebook.com/tupagina" target="_blank" rel="noopener" class="red-btn facebook">
+                <img src="/imagen/redes/face.svg" alt="Facebook">
+            </a>
+            <a href="https://instagram.com/tupagina" target="_blank" rel="noopener" class="red-btn instagram">
+                <img src="/imagen/redes/ing.svg" alt="Instagram">
+            </a>
+            <a href="https://wa.me/584245026456" target="_blank" rel="noopener" class="red-btn whatsapp">
+                <img src="/imagen/redes/what.svg" alt="WhatsApp">
+            </a>
+            <a href="https://tiktok.com/@tupagina" target="_blank" rel="noopener" class="red-btn tiktok">
+                <img src="/imagen/redes/tiktok.png" alt="TikTok">
+            </a>
+        </div>
+    </div>
+
     <div class="contenedor">
         <h1>Selecciona tus productos</h1>
         <div class="tasa-info" id="tasa-info">Cargando tasa del día...</div>
+        <div class="search-box">
+            <input type="text" id="buscador" placeholder="🔍 Buscar producto...">
+        </div>
     </div>
 
-    <div class="productos-grid-carrito" id="productos-lista" style="padding: 0 8px;"></div>
+    <div class="productos-grid-carrito" id="productos-lista"></div>
 
+    <!-- Botón del carrito centrado y cuadrado -->
     <button class="btn-flotante-carrito" onclick="toggleCarritoPanel()">
         🛒
         <span class="contador-flotante" id="contador-flotante" style="display:none;">0</span>
@@ -68,7 +91,7 @@
     </div>
 
     <script>
-        // Hamburger menu
+        // ─── Menú hamburguesa ───
         const hamburger = document.getElementById('hamburger-btn');
         const navMenu = document.getElementById('nav-menu');
         hamburger.addEventListener('click', () => {
@@ -80,9 +103,30 @@
             });
         });
 
+        // ─── Modal de redes sociales ───
+        const btnRedes = document.getElementById('btn-redes');
+        const overlayRedes = document.getElementById('redes-overlay');
+        const btnCerrarRedes = document.getElementById('redes-cerrar');
+
+        btnRedes.addEventListener('click', (e) => {
+            e.preventDefault();
+            overlayRedes.classList.add('activo');
+        });
+
+        btnCerrarRedes.addEventListener('click', () => {
+            overlayRedes.classList.remove('activo');
+        });
+
+        overlayRedes.addEventListener('click', (e) => {
+            if (e.target === overlayRedes) {
+                overlayRedes.classList.remove('activo');
+            }
+        });
+
         // ─── Lógica del carrito ───
         let tasaBCV = null;
         let carrito = [];
+        let productosOriginales = [];
         const API = '/api/productos';
 
         async function obtenerTasa() {
@@ -107,43 +151,57 @@
             return `Bs ${(usd * tasaBCV).toFixed(2)}`;
         }
 
+        function renderizarProductos(productos) {
+            const contenedor = document.getElementById('productos-lista');
+            if (productos.length === 0) {
+                contenedor.innerHTML = '<p style="text-align:center; color:#888; padding:20px;">No se encontraron productos</p>';
+                return;
+            }
+            contenedor.innerHTML = productos.map(p => `
+                <div class="producto-card-carrito">
+                    ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}">` : '<div style="height:110px; background:#333; display:flex; align-items:center; justify-content:center; color:#888;">Sin foto</div>'}
+                    <div class="producto-body">
+                        <div class="producto-nombre">${p.nombre}</div>
+                        <div class="producto-desc">${p.caracteristica}</div>
+                        <div class="precio-usd">$${p.precio_usd.toFixed(2)}</div>
+                        <div class="precio-bs">${formatearBs(p.precio_usd)}</div>
+                        <button class="btn-agregar" onclick="agregarAlCarrito(${p.id})">Agregar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         async function cargarProductos() {
             try {
                 const res = await fetch(API);
                 const productos = await res.json();
-                const contenedor = document.getElementById('productos-lista');
-                if (productos.length === 0) {
-                    contenedor.innerHTML = '<p style="text-align:center; color:#888; padding:20px;">No hay productos. Agregá desde <a href="admin.html" style="color:var(--vinotinto-claro);">Admin</a></p>';
-                    return;
-                }
-                contenedor.innerHTML = productos.map(p => `
-                    <div class="producto-card-carrito">
-                        ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}">` : '<div style="height:110px; background:#333; display:flex; align-items:center; justify-content:center; color:#888;">Sin foto</div>'}
-                        <div class="producto-body">
-                            <div class="producto-nombre">${p.nombre}</div>
-                            <div class="producto-desc">${p.caracteristica}</div>
-                            <div class="precio-usd">$${p.precio_usd.toFixed(2)}</div>
-                            <div class="precio-bs">${formatearBs(p.precio_usd)}</div>
-                            <button class="btn-agregar" onclick="agregarAlCarrito(${p.id})">Agregar</button>
-                        </div>
-                    </div>
-                `).join('');
+                productosOriginales = productos;
+                renderizarProductos(productos);
             } catch {
                 document.getElementById('productos-lista').innerHTML = '<p style="text-align:center; color:#f88;">Error al cargar productos</p>';
             }
         }
 
+        document.getElementById('buscador').addEventListener('input', function(e) {
+            const texto = e.target.value.toLowerCase().trim();
+            if (texto === '') {
+                renderizarProductos(productosOriginales);
+            } else {
+                const filtrados = productosOriginales.filter(p =>
+                    p.nombre.toLowerCase().includes(texto)
+                );
+                renderizarProductos(filtrados);
+            }
+        });
+
         function agregarAlCarrito(id) {
-            const productoCard = document.querySelector(`.producto-card-carrito .btn-agregar[onclick="agregarAlCarrito(${id})"]`)?.closest('.producto-card-carrito');
-            if (!productoCard) return;
-            const nombre = productoCard.querySelector('.producto-nombre').textContent;
-            const precio = parseFloat(productoCard.querySelector('.precio-usd').textContent.replace('$', ''));
-            const imagen = productoCard.querySelector('img')?.src || null;
+            const producto = productosOriginales.find(p => p.id === id);
+            if (!producto) return;
             const existente = carrito.find(item => item.id === id);
             if (existente) {
                 existente.cantidad++;
             } else {
-                carrito.push({ id, nombre, precio_usd: precio, cantidad: 1, imagen });
+                carrito.push({ id: producto.id, nombre: producto.nombre, precio_usd: producto.precio_usd, cantidad: 1, imagen: producto.imagen || null });
             }
             actualizarPanelCarrito();
         }

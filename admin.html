@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- ═══ HEADER UNIFICADO ═══ -->
     <header class="header">
         <div class="logo">
             <img src="/imagen/logo-trans.png" alt="Logo El Empanadar de Bebeto">
@@ -17,14 +18,34 @@
         <nav class="nav" id="nav-menu">
             <ul>
                 <li><a href="index.html">Inicio</a></li>
-                <li><a href="#">Redes</a></li>
+                <li><a href="#" id="btn-redes">Redes</a></li>
                 <li><a href="carrito.html">Carrito</a></li>
-                <li><a href="#">Ubicación</a></li>
+                <li><a href="index.html#ubicacion">Ubicación</a></li>
             </ul>
         </nav>
     </header>
 
-    <div class="contenedor">
+    <!-- ═══ OVERLAY DE REDES SOCIALES ═══ -->
+    <div class="redes-overlay" id="redes-overlay">
+        <button class="redes-cerrar" id="redes-cerrar">&times;</button>
+        <div class="redes-grid">
+            <a href="https://facebook.com/tupagina" target="_blank" rel="noopener" class="red-btn facebook">
+                <img src="/imagen/redes/face.svg" alt="Facebook">
+            </a>
+            <a href="https://instagram.com/tupagina" target="_blank" rel="noopener" class="red-btn instagram">
+                <img src="/imagen/redes/ing.svg" alt="Instagram">
+            </a>
+            <a href="https://wa.me/584245026456" target="_blank" rel="noopener" class="red-btn whatsapp">
+                <img src="/imagen/redes/what.svg" alt="WhatsApp">
+            </a>
+            <a href="https://tiktok.com/@tupagina" target="_blank" rel="noopener" class="red-btn tiktok">
+                <img src="/imagen/redes/tiktok.png" alt="TikTok">
+            </a>
+        </div>
+    </div>
+
+    <!-- ═══ CONTENIDO ADMIN ═══ -->
+    <div class="contenedor admin-contenedor">
         <h1>Administrar Productos</h1>
         <div class="tasa-info" id="tasa-info">Cargando tasa del día...</div>
         <form id="producto-form" enctype="multipart/form-data">
@@ -39,24 +60,27 @@
             <button type="submit">Guardar producto</button>
         </form>
         <div id="mensaje-error" style="color:#f88; margin-bottom:10px; display:none;"></div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Img</th>
-                    <th>Nombre</th>
-                    <th>USD</th>
-                    <th>Bs</th>
-                    <th>Característica</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="productos-body"></tbody>
-        </table>
+
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Img</th>
+                        <th>Nombre</th>
+                        <th>USD</th>
+                        <th>Bs</th>
+                        <th>Característica</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="productos-body"></tbody>
+            </table>
+        </div>
         <a href="carrito.html" class="volver">← Ir al carrito</a>
     </div>
 
     <script>
-        // Hamburger menu
+        // ═══ MENÚ HAMBURGUESA ═══
         const hamburger = document.getElementById('hamburger-btn');
         const navMenu = document.getElementById('nav-menu');
         hamburger.addEventListener('click', () => {
@@ -68,10 +92,31 @@
             });
         });
 
-        // ─── Admin logic ───
+        // ═══ MODAL DE REDES SOCIALES ═══
+        const btnRedes = document.getElementById('btn-redes');
+        const overlayRedes = document.getElementById('redes-overlay');
+        const btnCerrarRedes = document.getElementById('redes-cerrar');
+
+        btnRedes.addEventListener('click', (e) => {
+            e.preventDefault();
+            overlayRedes.classList.add('activo');
+        });
+
+        btnCerrarRedes.addEventListener('click', () => {
+            overlayRedes.classList.remove('activo');
+        });
+
+        overlayRedes.addEventListener('click', (e) => {
+            if (e.target === overlayRedes) {
+                overlayRedes.classList.remove('activo');
+            }
+        });
+
+        // ═══ LÓGICA DE ADMIN (CRUD) ═══
         let tasaBCV = null;
         const API = '/api/productos';
 
+        // Obtener tasa (con fallback para mostrar Bs siempre)
         async function obtenerTasa() {
             try {
                 const resp = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
@@ -80,15 +125,35 @@
                              data.oficial?.precio ?? data.oficial?.promedio ?? null;
                 if (typeof tasa === 'number' && tasa > 0) {
                     tasaBCV = tasa;
-                    document.getElementById('tasa-info').textContent = `Tasa BCV: Bs ${tasaBCV.toFixed(2)}`;
+                    document.getElementById('tasa-info').textContent = `✅ Tasa BCV: Bs ${tasaBCV.toFixed(2)}`;
                     return;
                 }
-            } catch {}
-            document.getElementById('tasa-info').textContent = 'Tasa BCV no disponible';
+            } catch (e) {
+                console.warn('Error al obtener tasa de dolarapi:', e);
+            }
+
+            // Fallback: intentar con bcv-api
+            try {
+                const resp = await fetch('https://api.bcv-api.xyz/v1/dolar');
+                const data = await resp.json();
+                const tasa = data?.dolar?.promedio ?? data?.promedio ?? data?.tasa ?? null;
+                if (typeof tasa === 'number' && tasa > 0) {
+                    tasaBCV = tasa;
+                    document.getElementById('tasa-info').textContent = `✅ Tasa BCV (alternativa): Bs ${tasaBCV.toFixed(2)}`;
+                    return;
+                }
+            } catch (e) {
+                console.warn('Error al obtener tasa de bcv-api:', e);
+            }
+
+            // Último fallback
+            tasaBCV = 650.00;
+            document.getElementById('tasa-info').textContent = `⚠️ Tasa estimada: Bs ${tasaBCV.toFixed(2)} (recarga para actualizar)`;
         }
 
         function formatearBs(usd) {
-            if (tasaBCV === null) return 'Bs --';
+            if (tasaBCV === null) return 'Bs -- (sin tasa)';
+            if (typeof usd !== 'number' || isNaN(usd)) return 'Bs 0.00';
             return `Bs ${(usd * tasaBCV).toFixed(2)}`;
         }
 
@@ -100,22 +165,28 @@
         }
 
         async function cargarProductos() {
-            const res = await fetch(API);
-            const productos = await res.json();
-            const tbody = document.getElementById('productos-body');
-            tbody.innerHTML = productos.map(p => `
-                <tr>
-                    <td>${p.imagen ? `<img class="img-miniatura" src="${p.imagen}" alt="${p.nombre}">` : '—'}</td>
-                    <td>${p.nombre}</td>
-                    <td>$${p.precio_usd.toFixed(2)}</td>
-                    <td class="precio-bs">${formatearBs(p.precio_usd)}</td>
-                    <td>${p.caracteristica}</td>
-                    <td>
-                        <button class="btn-editar" onclick="editarProducto(${p.id})">Editar</button>
-                        <button class="btn-eliminar" onclick="eliminarProducto(${p.id})">Eliminar</button>
-                    </td>
-                </tr>
-            `).join('');
+            try {
+                const res = await fetch(API);
+                const productos = await res.json();
+                const tbody = document.getElementById('productos-body');
+                tbody.innerHTML = productos.map(p => `
+                    <tr>
+                        <td>${p.imagen ? `<img class="img-miniatura" src="${p.imagen}" alt="${p.nombre}">` : '—'}</td>
+                        <td>${p.nombre}</td>
+                        <td>$${p.precio_usd.toFixed(2)}</td>
+                        <td class="precio-bs">${formatearBs(p.precio_usd)}</td>
+                        <td>${p.caracteristica}</td>
+                        <td>
+                            <button class="btn-editar" onclick="editarProducto(${p.id})">Editar</button>
+                            <button class="btn-eliminar" onclick="eliminarProducto(${p.id})">Eliminar</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error al cargar productos:', error);
+                document.getElementById('productos-body').innerHTML =
+                    '<tr><td colspan="6" style="text-align:center;color:#f88;">Error al cargar productos</td></tr>';
+            }
         }
 
         document.getElementById('producto-form').addEventListener('submit', async function(e) {
@@ -206,8 +277,11 @@
             }
         }
 
-        obtenerTasa();
-        cargarProductos();
+        // ═══ INICIO CORREGIDO: esperar a que la tasa esté lista ═══
+        (async function iniciar() {
+            await obtenerTasa();        // <--- AHORA SÍ esperamos
+            await cargarProductos();    // <--- se ejecuta después de tener la tasa
+        })();
     </script>
 </body>
 </html>

@@ -17,12 +17,31 @@
         <nav class="nav" id="nav-menu">
             <ul>
                 <li><a href="index.html">Inicio</a></li>
-                <li><a href="#">Redes</a></li>
+                <li><a href="#" id="btn-redes">Redes</a></li>
                 <li><a href="carrito.html">Carrito</a></li>
-                <li><a href="#">Ubicación</a></li>
+                <li><a href="#ubicacion">Ubicación</a></li>
             </ul>
         </nav>
     </header>
+
+    <!-- Overlay y botones de redes (flotantes, sin panel) -->
+    <div class="redes-overlay" id="redes-overlay">
+        <button class="redes-cerrar" id="redes-cerrar">&times;</button>
+        <div class="redes-grid">
+            <a href="https://facebook.com/tupagina" target="_blank" rel="noopener" class="red-btn facebook">
+                <img src="/imagen/redes/face.svg" alt="Facebook">
+            </a>
+            <a href="https://instagram.com/tupagina" target="_blank" rel="noopener" class="red-btn instagram">
+                <img src="/imagen/redes/ing.svg" alt="Instagram">
+            </a>
+            <a href="https://wa.me/584245026456" target="_blank" rel="noopener" class="red-btn whatsapp">
+                <img src="/imagen/redes/what.svg" alt="WhatsApp">
+            </a>
+            <a href="https://tiktok.com/@tupagina" target="_blank" rel="noopener" class="red-btn tiktok">
+                <img src="/imagen/redes/tiktok.png" alt="TikTok">
+            </a>
+        </div>
+    </div>
 
     <main>
         <section class="hero">
@@ -104,6 +123,7 @@
     </footer>
 
     <script>
+        // Menú hamburguesa
         const hamburger = document.getElementById('hamburger-btn');
         const navMenu = document.getElementById('nav-menu');
         hamburger.addEventListener('click', () => {
@@ -113,6 +133,26 @@
             link.addEventListener('click', () => {
                 navMenu.classList.remove('activo');
             });
+        });
+
+        // Modal de redes
+        const btnRedes = document.getElementById('btn-redes');
+        const overlayRedes = document.getElementById('redes-overlay');
+        const btnCerrarRedes = document.getElementById('redes-cerrar');
+
+        btnRedes.addEventListener('click', (e) => {
+            e.preventDefault();
+            overlayRedes.classList.add('activo');
+        });
+
+        btnCerrarRedes.addEventListener('click', () => {
+            overlayRedes.classList.remove('activo');
+        });
+
+        overlayRedes.addEventListener('click', (e) => {
+            if (e.target === overlayRedes) {
+                overlayRedes.classList.remove('activo');
+            }
         });
     </script>
 </body>

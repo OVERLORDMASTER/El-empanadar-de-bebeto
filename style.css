@@ -31,6 +31,10 @@
    ═══════════════════════════════════════════════════════════════ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     min-height: 100vh;
@@ -162,23 +166,21 @@ body {
     max-width: 90%;
 }
 
-/* Imagen con clase .empa responsiva */
 .empa {
     position: relative;
     text-align: center;
-    width: 100%;           /* Se adapta al ancho del contenedor */
-    max-width: 500px;      /* Nunca supera los 500px originales */
-    margin: 0 auto;        /* Centrado */
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
 }
 
 .empa img {
     width: 100%;
-    height: auto;          /* Mantiene la proporción */
+    height: auto;
     display: block;
-    border-radius: 10px;   /* Opcional, para mantener estilo */
+    border-radius: 10px;
 }
 
-/* Ajuste extra para pantallas muy pequeñas */
 @media (max-width: 400px) {
     .empa {
         max-width: 280px;
@@ -300,6 +302,81 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   MODAL DE REDES SOCIALES - Botones flotantes con color original
+   ═══════════════════════════════════════════════════════════════ */
+.redes-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.redes-overlay.activo {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.redes-cerrar {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    background: none;
+    border: none;
+    color: var(--blanco);
+    font-size: 40px;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 1001;
+    transition: transform 0.2s;
+}
+
+.redes-cerrar:hover {
+    transform: scale(1.2);
+}
+
+.redes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.red-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+
+.red-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.7);
+}
+
+.red-btn img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.facebook { background: #1877F2; }
+.instagram { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
+.whatsapp { background: #25D366; }
+.tiktok { background: #000000; border: 2px solid #ff0050; }
+
+/* ═══════════════════════════════════════════════════════════════
    FOOTER
    ═══════════════════════════════════════════════════════════════ */
 .footer {
@@ -317,17 +394,49 @@ body {
 .contenedor {
     max-width: 100%;
     width: 100%;
-    background: #1a1a1a;
-    border-radius: 10px;
-    padding: 12px;
+    background: #2a2a2a;
+    border-radius: 12px;
+    padding: 10px 14px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    border: 1px solid #333;
-    margin: 8px;
+    border: 1px solid #444;
+    margin: 8px auto;
+    color: var(--blanco);
 }
 
-h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size: 1.4rem; }
+h1 {
+    color: var(--vinotinto);
+    margin-bottom: 6px;
+    text-align: center;
+    font-size: 1.2rem;
+}
 
-.tasa-info { text-align: center; margin-bottom: 12px; color: var(--gris-claro); font-size: 0.85rem; }
+.tasa-info {
+    text-align: center;
+    margin-bottom: 8px;
+    color: var(--gris-claro);
+    font-size: 0.75rem;
+}
+
+/* ─── BUSCADOR ─── */
+.search-box {
+    margin: 0 0 8px 0;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #555;
+    border-radius: 25px;
+    background: #1a1a1a;
+    color: white;
+    font-size: 0.75rem;
+    outline: none;
+    transition: border 0.2s;
+}
+
+.search-box input:focus {
+    border-color: var(--vinotinto-claro);
+}
 
 /* ═══════════════════════════════════════════════════════════════
    TARJETAS DE PRODUCTOS (CARRITO)
@@ -336,19 +445,21 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 10px;
-    margin: 12px 0 80px;
-    padding: 0 8px;
+    margin: 12px auto 100px;
+    padding: 0;
+    max-width: 100%;
+    width: 100%;
 }
 
 .producto-card-carrito {
     background: #2a2a2a;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     transition: transform 0.2s;
     display: flex;
     flex-direction: column;
-    border: 1px solid #444;
+    border: 1px solid #555;
 }
 
 .producto-card-carrito:hover {
@@ -358,24 +469,24 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
 
 .producto-card-carrito img {
     width: 100%;
-    height: 110px;
+    aspect-ratio: 1 / 1;
     object-fit: cover;
     display: block;
 }
 
 .producto-card-carrito .producto-body {
-    padding: 8px;
+    padding: 5px 7.5px;
     display: flex;
     flex-direction: column;
     flex: 1;
-    gap: 3px;
+    gap: 4px;
 }
 
 .producto-card-carrito .producto-nombre {
     font-weight: 700;
-    font-size: 0.85rem;
-    color: var(--blanco);
-    margin-bottom: 1px;
+    font-size: 0.9rem;
+    color: #ffffff;
+    margin-bottom: 2px;
 }
 
 .producto-card-carrito .producto-desc {
@@ -397,11 +508,11 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
 
 .producto-card-carrito .btn-agregar {
     width: 100%;
-    margin-top: 5px;
+    margin-top: 6px;
     background: var(--vinotinto);
     color: white;
     border: none;
-    padding: 7px;
+    padding: 8px;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
@@ -413,49 +524,101 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
     background: var(--vinotinto-claro);
 }
 
+/* ────── Móvil: 2 columnas ────── */
+@media (max-width: 600px) {
+    .productos-grid-carrito {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 0 12px;
+    }
+
+    .contenedor {
+        padding: 8px 12px;
+        margin: 4px auto;
+        max-width: 94%;
+        border-radius: 10px;
+    }
+    
+    .search-box input {
+        padding: 8px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+/* ────── Escritorio: carrito angosto ────── */
+@media (min-width: 1024px) {
+    .productos-grid-carrito {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+        max-width: 1165px;
+    }
+
+    /* El carrito se mantiene angosto */
+    .contenedor {
+        max-width: 450px;
+        padding: 10px 14px;
+        margin: 8px auto;
+        border-radius: 12px;
+    }
+
+    h1 {
+        font-size: 1.2rem;
+        margin-bottom: 6px;
+    }
+    .tasa-info {
+        font-size: 0.75rem;
+        margin-bottom: 6px;
+    }
+    .search-box input {
+        padding: 9px 12px;
+        font-size: 0.75rem;
+    }
+}
+
 /* Botón flotante del carrito */
 .btn-flotante-carrito {
     position: fixed;
-    bottom: 14px;
-    right: 14px;
-    width: 50px;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    min-width: 180px;
     height: 50px;
     background: var(--vinotinto);
-    border-radius: 50%;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 10px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.6);
     z-index: 900;
     cursor: pointer;
     border: none;
-    font-size: 24px;
+    font-size: 22px;
     color: white;
-    transition: transform 0.2s, background 0.2s;
+    padding: 0 18px;
+    transition: background 0.2s;
 }
 
 .btn-flotante-carrito:hover {
-    transform: scale(1.1);
     background: var(--vinotinto-claro);
 }
 
 .contador-flotante {
-    position: absolute;
-    top: -4px;
-    right: -4px;
     background: #c0392b;
     color: white;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    font-size: 11px;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-left: 4px;
 }
 
-/* Panel del carrito (overlay) */
+/* Panel del carrito */
 .carrito-overlay {
     position: fixed;
     inset: 0;
@@ -475,18 +638,19 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
 }
 
 .carrito-panel {
-    background: #1a1a1a;
+    background: #2a2a2a;
     width: 100%;
     max-width: 500px;
     max-height: 80vh;
     border-radius: 18px 18px 0 0;
-    padding: 14px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 -8px 25px rgba(0,0,0,0.8);
     transform: translateY(100%);
     transition: transform 0.3s ease-out;
     margin: 0 auto;
+    color: var(--blanco);
 }
 
 .carrito-overlay.activo .carrito-panel {
@@ -497,10 +661,10 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     color: var(--vinotinto);
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
 }
 
 .carrito-panel-header button {
@@ -514,7 +678,7 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
 .carrito-lista {
     flex: 1;
     overflow-y: auto;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     font-size: 0.85rem;
 }
 
@@ -522,8 +686,8 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px solid #333;
+    padding: 8px 0;
+    border-bottom: 1px solid #444;
 }
 
 .carrito-item-nombre {
@@ -539,29 +703,28 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
 
 .carrito-total {
     text-align: right;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    margin: 8px 0;
+    margin: 10px 0;
     color: var(--blanco);
 }
 
-/* Campos de datos del cliente */
 .datos-cliente {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-top: 6px;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 12px;
 }
 
 .datos-cliente input,
 .datos-cliente select {
-    background: #2a2a2a;
-    border: 1px solid #444;
+    background: #1a1a1a;
+    border: 1px solid #555;
     color: white;
-    padding: 8px 10px;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
 }
 
 .btn-enviar-whatsapp {
@@ -572,13 +735,14 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
     background: #25D366;
     color: white;
     border: none;
-    padding: 12px;
+    padding: 14px;
     border-radius: 25px;
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 700;
     width: 100%;
     cursor: pointer;
     transition: background 0.2s;
+    margin-bottom: 15px;
 }
 
 .btn-enviar-whatsapp img {
@@ -591,45 +755,46 @@ h1 { color: var(--vinotinto); margin-bottom: 12px; text-align: center; font-size
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   FORMULARIOS Y TABLAS (ADMIN) - más pequeños y en columna
+   ADMIN – FORMULARIOS Y TABLAS (con ancho completo)
    ═══════════════════════════════════════════════════════════════ */
 form {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
 input, textarea, select {
-    background: #2a2a2a;
-    border: 1px solid #444;
+    background: #1a1a1a;
+    border: 1px solid #777;
     color: white;
-    padding: 8px 10px;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
 }
 
 textarea {
     resize: vertical;
-    min-height: 50px;
+    min-height: 60px;
 }
 
 input[type="file"] {
-    padding: 6px;
-    background: #2a2a2a;
+    padding: 8px;
+    background: #1a1a1a;
     color: #ccc;
     font-size: 0.8rem;
+    border-color: #555;
 }
 
 .preview {
     text-align: center;
-    margin: 6px 0;
+    margin: 8px 0;
 }
 
 .preview img {
     max-width: 120px;
     max-height: 120px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 2px solid var(--vinotinto);
     object-fit: cover;
 }
@@ -639,51 +804,54 @@ button[type="submit"] {
     cursor: pointer;
     color: white;
     border: none;
-    padding: 10px;
-    border-radius: 6px;
+    padding: 12px;
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
 }
 
 button[type="submit"]:hover {
     background: var(--vinotinto-claro);
 }
 
-/* ─── Tabla (con ajuste de texto largo) ─── */
+/* Tabla general (con scroll horizontal en móvil) */
 table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 12px;
-    font-size: 0.75rem;
-    table-layout: fixed;
+    font-size: 0.8rem;
+    background: #1a1a1a;
+    border-radius: 8px;
+    overflow: hidden;
+    min-width: 500px; /* para scroll en móvil */
 }
 
 th, td {
-    padding: 6px 4px;
+    padding: 8px 6px;
     text-align: left;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #444;
     word-break: break-word;
     overflow-wrap: break-word;
     white-space: normal;
     vertical-align: top;
+    color: var(--blanco);
 }
 
 th {
     background: #2a2a2a;
     color: var(--vinotinto-claro);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    white-space: normal;
 }
 
 .precio-bs {
     color: var(--gris-claro);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
 }
 
 .img-miniatura {
-    width: 35px;
-    height: 35px;
+    width: 40px;
+    height: 40px;
     object-fit: cover;
     border-radius: 4px;
     border: 1px solid #555;
@@ -693,7 +861,7 @@ th {
     background: #c0392b;
     color: white;
     border: none;
-    padding: 3px 6px;
+    padding: 4px 8px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.7rem;
@@ -701,10 +869,10 @@ th {
 
 .btn-editar {
     background: #2980b9;
-    margin-right: 3px;
+    margin-right: 4px;
     border: none;
     color: white;
-    padding: 3px 6px;
+    padding: 4px 8px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.7rem;
@@ -712,20 +880,69 @@ th {
 
 .volver {
     display: inline-block;
-    margin-top: 10px;
+    margin-top: 12px;
     color: var(--vinotinto-claro);
     text-decoration: none;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+}
+
+/* ═══════ ADMIN: contenedor ultra ancho en escritorio ═══════ */
+.admin-contenedor {
+    max-width: 60%;
+}
+
+@media (min-width: 1024px) {
+    /* Anular el ancho estrecho del carrito */
+    .admin-contenedor {
+        max-width: 60% !important;   /* fuerza el 100% */
+        padding: 30px 40px;
+        margin: 16px auto;
+        border-radius: 16px;
+        border: 1px solid #555;
+    }
+
+    /* El formulario ocupa todo el ancho disponible */
+    .admin-contenedor form {
+        max-width: 60%;
+    }
+
+    /* La tabla ocupa todo el ancho y se expande */
+    .admin-contenedor table {
+        min-width: auto;          /* quitamos el mínimo fijo */
+        width: 100%;
+        table-layout: auto;       /* se ajusta al contenido */
+    }
+}
+
+/* ────── Móvil: admin con padding y bordes visibles ────── */
+@media (max-width: 600px) {
+    .admin-contenedor {
+        padding: 12px 10px;
+        margin: 6px auto;
+        max-width: 96%;
+        border: 1px solid #666;
+    }
+    .admin-contenedor input,
+    .admin-contenedor textarea,
+    .admin-contenedor select {
+        font-size: 1rem;
+        padding: 12px;
+        border-color: #888;
+    }
+    .admin-contenedor button[type="submit"] {
+        font-size: 1rem;
+        padding: 14px;
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════════
    UTILIDADES
    ═══════════════════════════════════════════════════════════════ */
 .oculto { display: none; }
-.error { color: #f88; margin: 8px 0; font-size: 0.8rem; }
+.error { color: #f88; margin: 10px 0; font-size: 0.85rem; }
 
 /* ═══════════════════════════════════════════════════════════════
-   MEDIA QUERIES PARA PANTALLAS MÁS GRANDES (AJUSTES OPCIONALES)
+   MEDIA QUERIES PARA PANTALLAS MÁS GRANDES (AJUSTES GENERALES)
    ═══════════════════════════════════════════════════════════════ */
 @media (min-width: 600px) {
     .header {
@@ -751,9 +968,9 @@ th {
     .ubicacion-mapa { min-height: 250px; }
     
     .contenedor {
-        max-width: 800px;
-        padding: 20px;
-        margin: 16px auto;
+        max-width: 600px;
+        padding: 10px 14px;
+        margin: 10px auto;
     }
     
     .productos-grid-carrito {
@@ -767,7 +984,67 @@ th {
         margin-right: auto;
     }
     
-    table { font-size: 0.8rem; }
-    th, td { padding: 8px 10px; }
+    table { font-size: 0.85rem; }
+    th, td { padding: 10px 12px; }
     .img-miniatura { width: 45px; height: 45px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ESCRITORIO GRANDE: AGRANDAR SECCIONES (INDEX) Y 7 COLUMNAS
+   ═══════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+    .seccion {
+        padding: 80px 40px;
+        max-width: 1200px;
+    }
+
+    .seccion-titulo {
+        font-size: 2.8rem;
+    }
+
+    .seccion-titulo::after {
+        width: 100px;
+        height: 3px;
+    }
+
+    .conocenos-contenido,
+    .ubicacion-contenido {
+        gap: 40px;
+    }
+
+    .conocenos-texto,
+    .ubicacion-info {
+        font-size: 1.2rem;
+        line-height: 1.7;
+    }
+
+    .conocenos-imagen img {
+        max-width: 500px;
+    }
+
+    .productos-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 24px;
+    }
+
+    .producto-card img {
+        height: 180px;
+    }
+
+    .producto-card .producto-info h3 {
+        font-size: 1.2rem;
+    }
+
+    .producto-card .producto-info p {
+        font-size: 0.9rem;
+    }
+
+    .ubicacion-mapa {
+        min-height: 350px;
+    }
+
+    .footer {
+        padding: 20px;
+        font-size: 0.9rem;
+    }
 }
