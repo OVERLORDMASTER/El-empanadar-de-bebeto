@@ -4,6 +4,8 @@ const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -107,6 +109,14 @@ db.exec(`
     )
 `);
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL
+    )
+`);
+
 // ─── Agregar columna 'orden' si no existe en categorias ───
 const tableInfoCats = db.prepare("PRAGMA table_info(categorias)").all();
 if (!tableInfoCats.some(col => col.name === 'orden')) {
@@ -130,6 +140,27 @@ if (categoriasSinOrden.length > 0) {
         db.prepare('UPDATE categorias SET orden = ? WHERE id = ?').run(idx + 1, cat.id);
     });
     console.log('✅ Órdenes iniciales asignadas a categorías');
+}
+
+// ─── Crear usuario admin inicial si no existe ───
+const userCount = db.prepare('SELECT COUNT(id) as count FROM usuarios').get().count;
+if (userCount === 0) {
+    const defaultUser = 'admin';
+    const tempPassword = crypto.randomBytes(8).toString('hex');
+    const saltRounds = 10;
+    bcrypt.hash(tempPassword, saltRounds, (err, hash) => {
+        if (err) {
+            console.error('❌ Error al hashear la contraseña inicial:', err);
+        } else {
+            db.prepare('INSERT INTO usuarios (username, password_hash) VALUES (?, ?)').run(defaultUser, hash);
+            console.log('============================================================');
+            console.log('      CREDENCIALES DE ADMINISTRADOR POR PRIMERA VEZ      ');
+            console.log(`      Usuario: ${defaultUser}`);
+            console.log(`      Contraseña: ${tempPassword}`);
+            console.log('      Guardá esta contraseña y cambiala lo antes posible.');
+            console.log('============================================================');
+        }
+    });
 }
 
 // ═══════════════════════════════════════════════
@@ -283,6 +314,56 @@ app.put('/api/categorias/:id/mover', (req, res) => {
     trans();
 
     res.json({ mensaje: 'Orden actualizado correctamente' });
+});
+
+// ═══════════════════════════════════════════════
+// API REST - AUTENTICACIÓN
+// ═══════════════════════════════════════════════
+
+// Login
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ success: false, message: 'Usuario y contraseña requeridos' });
+    }
+
+    const user = db.prepare('SELECT * FROM usuarios WHERE username = ?').get(username);
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
+    }
+
+    bcrypt.compare(password, user.password_hash, (err, result) => {
+        if (result) {
+            res.json({ success: true });
+        } else {
+            res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
+        }
+    });
+});
+
+// Cambiar contraseña
+app.post('/api/user/change-password', (req, res) => {
+    const { username, oldPassword, newPassword } = req.body;
+    if (!username || !oldPassword || !newPassword) {
+        return res.status(400).json({ success: false, message: 'Todos los campos son requeridos' });
+    }
+
+    const user = db.prepare('SELECT * FROM usuarios WHERE username = ?').get(username);
+    if (!user) {
+        return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    bcrypt.compare(oldPassword, user.password_hash, (err, result) => {
+        if (result) {
+            const saltRounds = 10;
+            bcrypt.hash(newPassword, saltRounds, (err, hash) => {
+                db.prepare('UPDATE usuarios SET password_hash = ? WHERE id = ?').run(hash, user.id);
+                res.json({ success: true, message: 'Contraseña actualizada correctamente' });
+            });
+        } else {
+            res.status(401).json({ success: false, message: 'La contraseña actual es incorrecta' });
+        }
+    });
 });
 
 // ═══════════════════════════════════════════════

@@ -7,114 +7,8 @@
     <link rel="shortcut icon" href="/imagen/logo-trans.png" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <style>
-        /* ─── ESTILOS PARA EL SELECT DE MÉTODO DE PAGO ─── */
-        .datos-cliente select {
-            background: #1a1a1a;
-            border: 1px solid #555;
-            color: white;
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            appearance: none;
-            -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23cccccc' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            background-size: 12px 8px;
-            cursor: pointer;
-            transition: border-color 0.2s;
-            width: 100%;
-        }
-
-        .datos-cliente select:focus {
-            border-color: var(--vinotinto-claro);
-            outline: none;
-        }
-
-        .datos-cliente select option {
-            background: #2a2a2a;
-            color: white;
-            padding: 8px;
-        }
-
-        .datos-cliente select option[disabled] {
-            color: #888;
-            font-style: italic;
-        }
-
-        .datos-cliente {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 8px;
-            margin-bottom: 12px;
-        }
-
-        .datos-cliente input,
-        .datos-cliente select {
-            background: #1a1a1a;
-            border: 1px solid #555;
-            color: white;
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .datos-cliente input:focus {
-            border-color: var(--vinotinto-claro);
-            outline: none;
-        }
-
-        /* ─── ESTILOS BOTONES PICKUP / DELIVERY ─── */
-        .tipo-entrega-superior {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin: 10px auto 15px;
-            max-width: 600px;
-        }
-
-        .btn-entrega-superior {
-            flex: 1;
-            padding: 12px 20px;
-            border: 2px solid #555;
-            border-radius: 30px;
-            background: #1a1a1a;
-            color: #ccc;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-entrega-superior:hover {
-            border-color: var(--vinotinto-claro);
-            background: #2a2a2a;
-            color: #fff;
-        }
-
-        .btn-entrega-superior.seleccionado {
-            border-color: var(--vinotinto);
-            background: var(--vinotinto);
-            color: #fff;
-        }
-
-        .btn-entrega-superior.seleccionado:hover {
-            background: var(--vinotinto-claro);
-            border-color: var(--vinotinto-claro);
-        }
-
-        .btn-entrega-superior .icon {
-            margin-right: 8px;
-        }
-    </style>
 </head>
-<body>
+<body class="carrito-page-background">
     <header class="header">
         <div class="logo">
             <img src="/imagen/logo-trans.png" alt="Logo El Empanadar de Bebeto">
@@ -189,20 +83,30 @@
             </div>
             <div class="carrito-lista" id="carrito-lista"><p style="text-align:center; color:#888;">No hay productos en el carrito</p></div>
             
-            <!-- Contenedor para el costo de envío -->
-            <div id="delivery-cost-container" class="oculto" style="text-align: right; margin: 8px 0; font-weight: 600; color: var(--gris-claro);">
-                <span>Envío:</span>
-                <span id="delivery-cost-value">$0.00</span>
+            <!-- Contenedor de totales -->
+            <div class="carrito-resumen-totales" style="display: none;">
+                <div id="delivery-cost-container" class="oculto">
+                    <span>Envío</span>
+                    <span id="delivery-cost-value">$0.00</span>
+                    <button class="btn-quitar-envio oculto" onclick="quitarEnvio()" title="Quitar envío">×</button>
+                </div>
+                <div id="total-usd-container">
+                    <span>Total $</span>
+                    <span id="total-usd-value">$0.00</span>
+                </div>
+                <div id="total-bs-container">
+                    <span>Total Bs</span>
+                    <span id="total-bs-value">Bs 0.00</span>
+                </div>
             </div>
 
-            <div class="carrito-total" id="carrito-total">Total: $0.00</div>
             <div class="datos-cliente">
                 <input type="text" id="cliente-nombre" placeholder="Nombre">
                 <input type="text" id="cliente-apellido" placeholder="Apellido">
                 <input type="tel" id="cliente-telefono" placeholder="Teléfono" maxlength="16" pattern="[0-9]{0,16}" inputmode="numeric">
                 <input type="hidden" id="cliente-direccion" placeholder="Dirección de envío"> <!-- Ocultamos este campo, se llenará desde el mapa -->
                 <select id="cliente-pago">
-                    <option value="" disabled selected>Método de pago</option>
+                    <option value="" disabled selected hidden>Método de pago</option>
                     <option value="Pago Móvil">Pago Móvil</option>
                     <option value="Binance">Binance</option>
                     <option value="Punto">Punto</option>
@@ -436,7 +340,7 @@
             if (map) return; // Evitar reinicializar
             map = L.map('map-container').setView([miLat, miLon], 14);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-            L.marker([miLat, miLon], { title: 'El Empanadar de Bebeto' }).addTo(map);
+            // L.marker([miLat, miLon], { title: 'El Empanadar de Bebeto' }).addTo(map); // Eliminado el marcador inicial del local
 
             map.on('click', function(e) {
                 clienteLat = e.latlng.lat;
@@ -500,6 +404,17 @@
             });
         }
 
+        // --- Función para quitar el envío ---
+        function quitarEnvio() {
+            costoEnvio = 0;
+            distanciaKm = 0;
+            direccionCompleta = '';
+            clienteLat = null;
+            clienteLon = null;
+            document.getElementById('cliente-direccion').value = '';
+            actualizarPanelCarrito();
+        }
+
         // ─── Carrito ───
         function agregarAlCarrito(id) {
             const producto = productosOriginales.find(p => p.id === id);
@@ -551,10 +466,15 @@
 
         function actualizarPanelCarrito() {
             const listaEl = document.getElementById('carrito-lista');
-            const totalEl = document.getElementById('carrito-total');
             const contadorEl = document.getElementById('contador-flotante');
+
+            // Nuevos elementos de totales
+            const resumenTotales = document.querySelector('.carrito-resumen-totales');
             const deliveryCostContainer = document.getElementById('delivery-cost-container');
             const deliveryCostValue = document.getElementById('delivery-cost-value');
+            const totalUsdValue = document.getElementById('total-usd-value');
+            const totalBsValue = document.getElementById('total-bs-value');
+            const quitarEnvioBtn = document.querySelector('.btn-quitar-envio');
 
             const totalItems = carrito.reduce((s, i) => s + i.cantidad, 0);
             contadorEl.textContent = totalItems;
@@ -562,8 +482,9 @@
 
             if (carrito.length === 0) {
                 listaEl.innerHTML = '<p style="text-align:center; color:#888;">No hay productos en el carrito</p>';
-                totalEl.innerHTML = 'Total: $0.00';
-                deliveryCostContainer.classList.add('oculto');
+                if (resumenTotales) {
+                    resumenTotales.style.display = 'none';
+                }
                 return;
             }
 
@@ -585,6 +506,10 @@
                 `;
             }).join('');
 
+            if (resumenTotales) {
+                resumenTotales.style.display = 'flex';
+            }
+
             const subtotalUSD = carrito.reduce((s, i) => s + i.precio_usd * i.cantidad, 0);
             let totalFinal = subtotalUSD;
 
@@ -592,14 +517,21 @@
                 deliveryCostContainer.classList.remove('oculto');
                 deliveryCostValue.textContent = `$${costoEnvio.toFixed(2)}`;
                 totalFinal += costoEnvio;
+                if (costoEnvio > 0) {
+                    quitarEnvioBtn.classList.remove('oculto');
+                } else {
+                    quitarEnvioBtn.classList.add('oculto');
+                }
             } else {
                 deliveryCostContainer.classList.add('oculto');
             }
-            totalEl.innerHTML = `Total: $${totalFinal.toFixed(2)}<br><small>${formatearBs(totalFinal)}</small>`;
+            totalUsdValue.textContent = `$${totalFinal.toFixed(2)}`;
+            totalBsValue.textContent = formatearBs(totalFinal);
         }
 
         function toggleCarritoPanel() {
             document.getElementById('carrito-overlay').classList.toggle('activo');
+            document.body.classList.toggle('carrito-panel-activo'); // Toggle class on body
         }
 
         function enviarWhatsApp() {
@@ -631,53 +563,60 @@
                 return;
             }
 
-            let mensaje = 'mi pedido\n\n';
+            let mensaje = '📝 Pedido\n';
+            mensaje += '🛒 Productos:\n';
 
             // Lista de productos
             carrito.forEach(item => {
-                const subtotal = item.precio_usd * item.cantidad;
-                mensaje += `${item.nombre} x${item.cantidad} = ${subtotal.toFixed(2)} $`;
+                const subtotalItemUSD = item.precio_usd * item.cantidad;
+                let bsValueItem = '';
                 if (tasaBCV) {
-                    const bsValue = formatearBs(subtotal).replace('Bs ', '');
-                    mensaje += ` / ${bsValue} bs`;
+                    bsValueItem = formatearBs(subtotalItemUSD).replace('Bs ', '');
                 }
-                mensaje += '\n';
+                mensaje += `• ${item.nombre}: x${item.cantidad} ($${subtotalItemUSD.toFixed(2)} / ${bsValueItem} Bs)\n`;
             });
             mensaje += '\n';
+
+            mensaje += '💰 Pago:\n\n';
 
             const subtotal = carrito.reduce((s, i) => s + i.precio_usd * i.cantidad, 0);
             
             // Subtotales y envío
-            mensaje += `subtotal = ${subtotal.toFixed(2)} $\n`;
+            let subtotalBS = '';
             if (tasaBCV) {
-                const bsValue = formatearBs(subtotal).replace('Bs ', '');
-                mensaje += `subtotal = ${bsValue} bs\n`;
+                subtotalBS = formatearBs(subtotal).replace('Bs ', '');
             }
+            mensaje += `Subtotal: $${subtotal.toFixed(2)} (${subtotalBS} Bs)\n`;
 
             if (tipoEntrega === 'delivery' && costoEnvio > 0) {
-                mensaje += `costo de envio = ${costoEnvio.toFixed(2)} $\n`;
+                let costoEnvioBS = '';
+                if (tasaBCV) {
+                    costoEnvioBS = formatearBs(costoEnvio).replace('Bs ', '');
+                }
+                mensaje += `Delivery: $${costoEnvio.toFixed(2)} (${costoEnvioBS} Bs)\n`;
             }
             mensaje += '\n';
 
             // Totales
             const totalFinal = subtotal + costoEnvio;
-            mensaje += `total a pagar = ${totalFinal.toFixed(2)} $\n`;
+            let totalFinalBS = '';
             if (tasaBCV) {
-                const bsValue = formatearBs(totalFinal).replace('Bs ', '');
-                mensaje += `total a pagar = ${bsValue} bs\n`;
+                totalFinalBS = formatearBs(totalFinal).replace('Bs ', '');
             }
-            mensaje += '\n';
+            mensaje += `TOTAL A PAGAR: $${totalFinal.toFixed(2)} (${totalFinalBS} Bs)\n\n`;
 
             // Datos del cliente y entrega
-            if (nombre || apellido) mensaje += `nombre: ${nombre} ${apellido}`.trim() + '\n';
-            if (telefono) mensaje += `tlf: ${telefono}\n`;
-            if (pago) mensaje += `metodo de pago: (${pago})\n`;
-            mensaje += `tipo de entrega: (${tipoEntrega === 'pickup' ? 'Pickup' : 'Delivery'})\n\n`;
+            mensaje += '👤 Información del Cliente:\n\n';
+            if (nombre || apellido) mensaje += `Nombre: ${nombre} ${apellido}`.trim() + '\n';
+            if (telefono) mensaje += `Teléfono: ${telefono}\n`;
+            if (pago) mensaje += `Método de Pago: ${pago}\n`;
+            mensaje += `Tipo de Entrega: ${tipoEntrega === 'pickup' ? 'Pickup' : 'Delivery'}\n\n`;
 
             if (tipoEntrega === 'delivery') {
-                mensaje += `direccion: ${direccion}\n`;
-                mensaje += `distancia: ${distanciaKm.toFixed(2)} km\n`;
-                mensaje += `ubicacion gps: https://www.google.com/maps/search/?api=1&query=${clienteLat},${clienteLon}\n`;
+                mensaje += '📍 Dirección de Envío:\n\n';
+                mensaje += `Ubicación: ${direccion}\n`;
+                mensaje += `Distancia: ${distanciaKm.toFixed(2)} km\n`;
+                mensaje += `GPS: https://www.google.com/maps/search/?api=1&query=${clienteLat},${clienteLon}\n`;
             }
 
             window.open(`https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`, '_blank');

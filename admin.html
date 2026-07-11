@@ -141,10 +141,6 @@
     </div>
 
     <script>
-        // ═══ CREDENCIALES ═══
-        const USUARIO_VALIDO = 'admin';
-        const CONTRASENA_VALIDA = 'admin123';
-
         // ═══ ELEMENTOS ═══
         const loginWrapper = document.getElementById('login-wrapper');
         const adminContent = document.getElementById('admin-content');
@@ -155,21 +151,31 @@
         const adminBody = document.getElementById('admin-body');
 
         // ═══ LOGIN ═══
-        function intentarLogin() {
+        async function intentarLogin() {
             const usuario = loginUser.value.trim();
             const contrasena = loginPass.value.trim();
 
-            if (usuario === USUARIO_VALIDO && contrasena === CONTRASENA_VALIDA) {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usuario, password: contrasena })
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    sessionStorage.setItem('adminUser', usuario); // Guardar usuario para otras operaciones
+                    loginError.style.display = 'none';
+                    loginWrapper.style.display = 'none';
+                    adminContent.style.display = 'block';
+                    adminBody.classList.remove('login-page');
+                    iniciarAdmin();
+                } else {
+                    loginError.style.display = 'block';
+                }
+            } catch (error) {
                 loginError.style.display = 'none';
-                loginWrapper.style.display = 'none';
-                adminContent.style.display = 'block';
-                adminBody.classList.remove('login-page');
-                iniciarAdmin();
-            } else {
-                loginError.style.display = 'block';
-                loginUser.value = '';
-                loginPass.value = '';
-                loginUser.focus();
+                alert('Error de conexión con el servidor.');
             }
         }
 
@@ -327,6 +333,48 @@
             }
         }
 
+        // ─── Cambio de contraseña ───
+        document.getElementById('password-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const username = sessionStorage.getItem('adminUser');
+            const mensajeEl = document.getElementById('password-mensaje');
+
+            if (newPassword !== confirmPassword) {
+                mensajeEl.textContent = '❌ Las nuevas contraseñas no coinciden.';
+                mensajeEl.style.color = '#f88';
+                mensajeEl.style.display = 'block';
+                return;
+            }
+
+            if (!username) {
+                alert('Error de sesión. Por favor, volvé a iniciar sesión.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/user/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, oldPassword, newPassword })
+                });
+                const data = await res.json();
+                mensajeEl.textContent = data.message;
+                mensajeEl.style.color = res.ok ? '#4caf50' : '#f88';
+                mensajeEl.style.display = 'block';
+
+                if (res.ok) {
+                    document.getElementById('password-form').reset();
+                }
+            } catch (e) {
+                mensajeEl.textContent = '❌ Error de conexión con el servidor.';
+                mensajeEl.style.color = '#f88';
+                mensajeEl.style.display = 'block';
+            }
+        });
+
         // ─── Productos ───
         async function cargarProductos() {
             try {
@@ -466,6 +514,48 @@
                 fileNameSpan.textContent = 'Sin archivos seleccionados';
             }
         }
+
+        // ─── Cambio de contraseña ───
+        document.getElementById('password-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const username = sessionStorage.getItem('adminUser');
+            const mensajeEl = document.getElementById('password-mensaje');
+
+            if (newPassword !== confirmPassword) {
+                mensajeEl.textContent = '❌ Las nuevas contraseñas no coinciden.';
+                mensajeEl.style.color = '#f88';
+                mensajeEl.style.display = 'block';
+                return;
+            }
+
+            if (!username) {
+                alert('Error de sesión. Por favor, volvé a iniciar sesión.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/user/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, oldPassword, newPassword })
+                });
+                const data = await res.json();
+                mensajeEl.textContent = data.message;
+                mensajeEl.style.color = res.ok ? '#4caf50' : '#f88';
+                mensajeEl.style.display = 'block';
+
+                if (res.ok) {
+                    document.getElementById('password-form').reset();
+                }
+            } catch (e) {
+                mensajeEl.textContent = '❌ Error de conexión con el servidor.';
+                mensajeEl.style.color = '#f88';
+                mensajeEl.style.display = 'block';
+            }
+        });
 
         // ─── Inicialización ───
         async function iniciarAdmin() {
