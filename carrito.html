@@ -573,27 +573,27 @@
                 if (tasaBCV) {
                     bsValueItem = formatearBs(subtotalItemUSD).replace('Bs ', '');
                 }
-                mensaje += `• ${item.nombre}: x${item.cantidad} ($${subtotalItemUSD.toFixed(2)} / ${bsValueItem} Bs)\n`;
+                mensaje += `• ${item.nombre}: x${item.cantidad} \n ($${subtotalItemUSD.toFixed(2)} / ${bsValueItem} Bs)\n`;
             });
             mensaje += '\n';
 
             mensaje += '💰 Pago:\n\n';
 
             const subtotal = carrito.reduce((s, i) => s + i.precio_usd * i.cantidad, 0);
-            
+
             // Subtotales y envío
             let subtotalBS = '';
             if (tasaBCV) {
                 subtotalBS = formatearBs(subtotal).replace('Bs ', '');
             }
-            mensaje += `Subtotal: $${subtotal.toFixed(2)} (${subtotalBS} Bs)\n`;
+            mensaje += `Subtotal: \n$${subtotal.toFixed(2)} (${subtotalBS} Bs)\n`;
 
             if (tipoEntrega === 'delivery' && costoEnvio > 0) {
                 let costoEnvioBS = '';
                 if (tasaBCV) {
                     costoEnvioBS = formatearBs(costoEnvio).replace('Bs ', '');
                 }
-                mensaje += `Delivery: $${costoEnvio.toFixed(2)} (${costoEnvioBS} Bs)\n`;
+                mensaje += `Delivery: \n$${costoEnvio.toFixed(2)} (${costoEnvioBS} Bs)\n`;
             }
             mensaje += '\n';
 
@@ -603,7 +603,7 @@
             if (tasaBCV) {
                 totalFinalBS = formatearBs(totalFinal).replace('Bs ', '');
             }
-            mensaje += `TOTAL A PAGAR: $${totalFinal.toFixed(2)} (${totalFinalBS} Bs)\n\n`;
+            mensaje += `TOTAL A PAGAR: \n$${totalFinal.toFixed(2)} (${totalFinalBS} Bs)\n\n`;
 
             // Datos del cliente y entrega
             mensaje += '👤 Información del Cliente:\n\n';
