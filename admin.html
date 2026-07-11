@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body id="admin-body" class="login-page">
-    <!-- Header unificado -->
+    <!-- Header -->
     <header class="header">
         <div class="logo">
             <img src="/imagen/logo-trans.png" alt="Logo El Empanadar de Bebeto">
@@ -25,7 +25,7 @@
         </nav>
     </header>
 
-    <!-- Overlay redes sociales -->
+    <!-- Overlay redes -->
     <div class="redes-overlay" id="redes-overlay">
         <button class="redes-cerrar" id="redes-cerrar">&times;</button>
         <div class="redes-grid">
@@ -44,7 +44,7 @@
         </div>
     </div>
 
-    <!-- ═══ LOGIN WRAPPER (con fondo de hero) ═══ -->
+    <!-- ═══ LOGIN ═══ -->
     <div class="login-wrapper" id="login-wrapper">
         <div class="login-box">
             <h2>🔐 Acceso restringido</h2>
@@ -58,7 +58,7 @@
         </div>
     </div>
 
-    <!-- ═══ CONTENIDO ADMIN (oculto hasta login) ═══ -->
+    <!-- ═══ ADMIN CONTENT ═══ -->
     <div class="contenedor admin-contenedor" id="admin-content" style="display:none;">
         <h1>Administrar Productos</h1>
         <div class="tasa-info" id="tasa-info">Cargando tasa del día...</div>
@@ -67,6 +67,23 @@
             <input type="text" id="nombre" placeholder="Nombre" required>
             <input type="number" step="0.01" id="precio" placeholder="Precio USD" required>
             <textarea id="caracteristica" placeholder="Característica" required></textarea>
+
+            <!-- Campo de texto para la categoría -->
+            <input type="text" id="categoria-input" placeholder="Categoría (ej: Empanadas, Bebidas, etc.)">
+
+            <!-- Selector de tipo de entrega -->
+            <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap; margin:5px 0;">
+                <label style="color:var(--gris-claro); font-weight:600;">Disponible para:</label>
+                <label style="display:flex; align-items:center; gap:5px; color:white;">
+                    <input type="radio" name="tipo_entrega" value="delivery"> Delivery
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; color:white;">
+                    <input type="radio" name="tipo_entrega" value="pickup"> Pickup
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; color:white;">
+                    <input type="radio" name="tipo_entrega" value="ambos" checked> Ambos
+                </label>
+            </div>
 
             <div class="file-upload-wrapper">
                 <label for="imagen-file" class="file-upload-label">Seleccionar archivo</label>
@@ -81,7 +98,7 @@
         </form>
         <div id="mensaje-error" style="color:#f88; margin-bottom:10px; display:none;"></div>
 
-        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
@@ -90,12 +107,36 @@
                         <th>USD</th>
                         <th>Bs</th>
                         <th>Característica</th>
+                        <th>Categoría</th>
+                        <th>Entrega</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="productos-body"></tbody>
             </table>
         </div>
+
+        <hr style="border-color:#444; margin:40px 0 20px;">
+
+        <!-- ═══ TABLA DE CATEGORÍAS ORDENABLE ═══ -->
+        <h2 style="color:var(--vinotinto); text-align:center;">Ordenar Categorías</h2>
+        <p style="text-align:center; color:var(--gris-claro); font-size:0.85rem; margin-bottom:10px;">
+            Usá los botones ▲ y ▼ para cambiar el orden en que aparecen en el carrito.
+        </p>
+        <div style="overflow-x: auto;">
+            <table id="tabla-categorias">
+                <thead>
+                    <tr>
+                        <th>Orden</th>
+                        <th>Nombre</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="categorias-body"></tbody>
+            </table>
+        </div>
+        <div id="categoria-mensaje" style="margin:10px 0; display:none; text-align:center; font-weight:bold;"></div>
+
         <a href="carrito.html" class="volver">← Ir al carrito</a>
     </div>
 
@@ -113,7 +154,7 @@
         const loginError = document.getElementById('login-error');
         const adminBody = document.getElementById('admin-body');
 
-        // ═══ FUNCIÓN LOGIN ═══
+        // ═══ LOGIN ═══
         function intentarLogin() {
             const usuario = loginUser.value.trim();
             const contrasena = loginPass.value.trim();
@@ -122,9 +163,7 @@
                 loginError.style.display = 'none';
                 loginWrapper.style.display = 'none';
                 adminContent.style.display = 'block';
-                // Quitar fondo de hero del body
                 adminBody.classList.remove('login-page');
-                // Iniciar admin
                 iniciarAdmin();
             } else {
                 loginError.style.display = 'block';
@@ -136,16 +175,10 @@
 
         loginBtn.addEventListener('click', intentarLogin);
         loginPass.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                intentarLogin();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); intentarLogin(); }
         });
         loginUser.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                loginPass.focus();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); loginPass.focus(); }
         });
 
         // ═══ MENÚ HAMBURGUESA ═══
@@ -160,7 +193,7 @@
             });
         });
 
-        // ═══ MODAL REDES ═══
+        // ═══ REDES ═══
         const btnRedes = document.getElementById('btn-redes');
         const overlayRedes = document.getElementById('redes-overlay');
         const btnCerrarRedes = document.getElementById('redes-cerrar');
@@ -173,15 +206,15 @@
             overlayRedes.classList.remove('activo');
         });
         overlayRedes.addEventListener('click', (e) => {
-            if (e.target === overlayRedes) {
-                overlayRedes.classList.remove('activo');
-            }
+            if (e.target === overlayRedes) overlayRedes.classList.remove('activo');
         });
 
-        // ═══ LÓGICA ADMIN (CRUD) ═══
+        // ═══ ADMIN LOGIC ═══
         let tasaBCV = null;
         const API = '/api/productos';
+        const API_CATEGORIAS = '/api/categorias';
 
+        // ─── Tasa ───
         async function obtenerTasa() {
             try {
                 const resp = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
@@ -193,9 +226,7 @@
                     document.getElementById('tasa-info').textContent = `✅ Tasa BCV: Bs ${tasaBCV.toFixed(2)}`;
                     return;
                 }
-            } catch (e) {
-                console.warn('Error al obtener tasa de dolarapi:', e);
-            }
+            } catch (e) { /* ignore */ }
             try {
                 const resp = await fetch('https://api.bcv-api.xyz/v1/dolar');
                 const data = await resp.json();
@@ -205,9 +236,7 @@
                     document.getElementById('tasa-info').textContent = `✅ Tasa BCV (alternativa): Bs ${tasaBCV.toFixed(2)}`;
                     return;
                 }
-            } catch (e) {
-                console.warn('Error al obtener tasa de bcv-api:', e);
-            }
+            } catch (e) { /* ignore */ }
             tasaBCV = 650.00;
             document.getElementById('tasa-info').textContent = `⚠️ Tasa estimada: Bs ${tasaBCV.toFixed(2)} (recarga para actualizar)`;
         }
@@ -225,6 +254,80 @@
             setTimeout(() => { el.style.display = 'none'; }, 5000);
         }
 
+        function mostrarMensajeCategoria(texto, color) {
+            const el = document.getElementById('categoria-mensaje');
+            el.textContent = texto;
+            el.style.color = color || '#4caf50';
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 3000);
+        }
+
+        // ─── Categorías ───
+        async function cargarCategorias() {
+            try {
+                const res = await fetch(API_CATEGORIAS);
+                const categorias = await res.json();
+                const tbody = document.getElementById('categorias-body');
+                if (categorias.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">No hay categorías creadas</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = categorias.map((c, index) => `
+                    <tr>
+                        <td style="text-align:center;">${c.orden || index + 1}</td>
+                        <td>${c.nombre}</td>
+                        <td style="display:flex; gap:4px; flex-wrap:wrap; justify-content:center;">
+                            <button class="btn-mover" data-id="${c.id}" data-dir="up" title="Subir">▲</button>
+                            <button class="btn-mover" data-id="${c.id}" data-dir="down" title="Bajar">▼</button>
+                            <button class="btn-eliminar" onclick="eliminarCategoria(${c.id})">✕</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Event listeners para mover
+                document.querySelectorAll('.btn-mover').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const id = this.dataset.id;
+                        const dir = this.dataset.dir;
+                        await moverCategoria(id, dir);
+                    });
+                });
+            } catch (e) {
+                document.getElementById('categorias-body').innerHTML = '<tr><td colspan="3" style="color:#f88;">Error al cargar categorías</td></tr>';
+            }
+        }
+
+        async function moverCategoria(id, direccion) {
+            try {
+                const res = await fetch(`${API_CATEGORIAS}/${id}/mover`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ direccion })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    mostrarMensajeCategoria('✅ Orden actualizado', '#4caf50');
+                    await cargarCategorias(); // recargar tabla
+                } else {
+                    mostrarMensajeCategoria('❌ ' + (data.error || 'Error'), '#f88');
+                }
+            } catch (e) {
+                mostrarMensajeCategoria('❌ Error de conexión', '#f88');
+            }
+        }
+
+        async function eliminarCategoria(id) {
+            if (!confirm('¿Eliminar esta categoría? Los productos quedarán sin categoría.')) return;
+            try {
+                await fetch(`${API_CATEGORIAS}/${id}`, { method: 'DELETE' });
+                mostrarMensajeCategoria('✅ Categoría eliminada', '#4caf50');
+                await cargarCategorias();
+            } catch (e) {
+                mostrarMensajeCategoria('❌ Error al eliminar', '#f88');
+            }
+        }
+
+        // ─── Productos ───
         async function cargarProductos() {
             try {
                 const res = await fetch(API);
@@ -237,6 +340,8 @@
                         <td>$${p.precio_usd.toFixed(2)}</td>
                         <td class="precio-bs">${formatearBs(p.precio_usd)}</td>
                         <td>${p.caracteristica}</td>
+                        <td>${p.categoria_nombre || '—'}</td>
+                        <td>${p.tipo_entrega === 'delivery' ? '📦 Delivery' : p.tipo_entrega === 'pickup' ? '🏪 Pickup' : '✅ Ambos'}</td>
                         <td>
                             <button class="btn-editar" onclick="editarProducto(${p.id})">Editar</button>
                             <button class="btn-eliminar" onclick="eliminarProducto(${p.id})">Eliminar</button>
@@ -244,9 +349,7 @@
                     </tr>
                 `).join('');
             } catch (error) {
-                console.error('Error al cargar productos:', error);
-                document.getElementById('productos-body').innerHTML =
-                    '<tr><td colspan="6" style="text-align:center;color:#f88;">Error al cargar productos</td></tr>';
+                document.getElementById('productos-body').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#f88;">Error al cargar productos</td></tr>';
             }
         }
 
@@ -257,6 +360,14 @@
             formData.append('nombre', document.getElementById('nombre').value.trim());
             formData.append('precio_usd', document.getElementById('precio').value);
             formData.append('caracteristica', document.getElementById('caracteristica').value.trim());
+            const categoria = document.getElementById('categoria-input').value.trim();
+            if (categoria) formData.append('categoria', categoria);
+
+            const tipoEntregaRadios = document.querySelectorAll('input[name="tipo_entrega"]');
+            let tipoEntrega = 'ambos';
+            tipoEntregaRadios.forEach(r => { if (r.checked) tipoEntrega = r.value; });
+            formData.append('tipo_entrega', tipoEntrega);
+
             const imagenInput = document.getElementById('imagen-file');
             if (imagenInput.files.length > 0) {
                 formData.append('imagen', imagenInput.files[0]);
@@ -269,11 +380,13 @@
                 const res = await fetch(url, { method, body: formData });
                 const data = await res.json();
                 if (res.ok) {
-                    cargarProductos();
+                    await cargarProductos();
+                    await cargarCategorias(); // actualizar lista de categorías también
                     document.getElementById('producto-form').reset();
                     document.getElementById('edit-id').value = '';
                     document.getElementById('preview-container').style.display = 'none';
                     document.getElementById('file-name').textContent = 'Sin archivos seleccionados';
+                    document.querySelector('input[name="tipo_entrega"][value="ambos"]').checked = true;
                 } else {
                     mostrarError(data.error || 'Error desconocido');
                 }
@@ -292,6 +405,13 @@
                     document.getElementById('nombre').value = p.nombre;
                     document.getElementById('precio').value = p.precio_usd;
                     document.getElementById('caracteristica').value = p.caracteristica;
+                    document.getElementById('categoria-input').value = p.categoria_nombre || '';
+
+                    const tipo = p.tipo_entrega || 'ambos';
+                    document.querySelectorAll('input[name="tipo_entrega"]').forEach(r => {
+                        r.checked = (r.value === tipo);
+                    });
+
                     document.getElementById('imagen-file').value = '';
                     const previewContainer = document.getElementById('preview-container');
                     const previewImg = document.getElementById('preview-img');
@@ -314,7 +434,7 @@
             if (!confirm('¿Eliminar este producto?')) return;
             try {
                 await fetch(`${API}/${id}`, { method: 'DELETE' });
-                cargarProductos();
+                await cargarProductos();
             } catch {
                 mostrarError('Error al eliminar');
             }
@@ -347,9 +467,11 @@
             }
         }
 
+        // ─── Inicialización ───
         async function iniciarAdmin() {
             await obtenerTasa();
             await cargarProductos();
+            await cargarCategorias();
         }
     </script>
 </body>
