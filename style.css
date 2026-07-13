@@ -914,8 +914,8 @@ h1 {
     background: #e74c3c;
 }
 .datos-cliente {
-    display: flex;
-    flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     margin-top: 8px;
     margin-bottom: 12px;
@@ -956,6 +956,28 @@ h1 {
     padding: 8px;
 }
 
+    .botones-accion-carrito {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    #btn-verificar-direccion {
+        flex: 1;
+        padding: 14px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 1rem;
+        gap: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
 .btn-enviar-whatsapp {
     display: flex;
     align-items: center;
@@ -968,10 +990,9 @@ h1 {
     border-radius: 25px;
     font-size: 1rem;
     font-weight: 700;
-    width: 100%;
+        flex: 1;
     cursor: pointer;
     transition: background 0.2s;
-    margin-bottom: 15px;
 }
 
 .btn-enviar-whatsapp img {
