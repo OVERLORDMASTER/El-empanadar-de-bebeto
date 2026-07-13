@@ -358,10 +358,8 @@
         function inicializarMapa() {
             if (map) return; // Evitar reinicializar
             map = L.map('map-container').setView([miLat, miLon], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-                attribution: '© OpenStreetMap',
-                detectRetina: true // Mejora la resolución en pantallas de alta densidad (móviles)
-            }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap' }).addTo(map);
             // L.marker([miLat, miLon], { title: 'El Empanadar de Bebeto' }).addTo(map); // Eliminado el marcador inicial del local
 
             map.on('click', function(e) {
