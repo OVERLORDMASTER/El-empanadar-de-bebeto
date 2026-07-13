@@ -2,8 +2,8 @@
    ROOT CON VARIABLES DE COLORES
    ═══════════════════════════════════════════════════════════════ */
 :root {
-    --vinotinto: #800020;
-    --vinotinto-claro: #a00028;
+    --vinotinto: #810003;
+    --vinotinto-claro: #810003;
     --negro: #000000;
     --blanco: #ffffff;
     --blanco-humo: #f0f0f0;
@@ -1801,7 +1801,6 @@ body.login-page .header {
 /* ═══════════════════════════════════════════════════════════════
    AJUSTE PARA EVITAR QUE EL CARRITO TAPE EL ÚLTIMO PRODUCTO
    ═══════════════════════════════════════════════════════════════ */
-body.carrito-panel-activo {
-    /* El panel del carrito tiene max-height: 80vh. Le damos un poco más de espacio. */
-    padding-bottom: 85vh;
+body.carrito-panel-activo { /* Evita que el fondo se desplace cuando el carrito está abierto */
+    overflow: hidden;
 }

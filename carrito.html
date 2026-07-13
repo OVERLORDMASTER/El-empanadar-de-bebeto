@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
+
 <body class="carrito-page-background">
     <header class="header">
         <div class="logo">
@@ -312,34 +313,36 @@
             document.getElementById('btn-pickup').classList.toggle('seleccionado', tipo === 'pickup');
             document.getElementById('btn-delivery').classList.toggle('seleccionado', tipo === 'delivery');
 
+            const verificarBtn = document.getElementById('btn-verificar-direccion');
             const pagoSelect = document.getElementById('cliente-pago');
             const opcionPunto = pagoSelect.querySelector('option[value="Punto"]');
-            const verificarBtn = document.getElementById('btn-verificar-direccion');
 
             if (tipo === 'delivery') {
-                verificarBtn.classList.remove('oculto');
-                if (opcionPunto) {
-                    opcionPunto.style.display = 'none';
-                }
-                // Si "Punto" estaba seleccionado, se resetea el selector
-                if (pagoSelect.value === 'Punto') {
-                    pagoSelect.value = '';
-                }
-            } else {
-                if (opcionPunto) {
-                    opcionPunto.style.display = 'block';
-                }
-                verificarBtn.classList.add('oculto');
-                // Resetear costos y datos de envío al cambiar a pickup
+                // MUESTRA el botón de dirección para Delivery
+                verificarBtn.style.display = 'flex';
+                
+                // Oculta la opción de pago "Punto"
+                if (opcionPunto) opcionPunto.style.display = 'none';
+                if (pagoSelect.value === 'Punto') pagoSelect.value = '';
+
+            } else { // tipo === 'pickup'
+                // OCULTA el botón de dirección para Pickup
+                verificarBtn.style.display = 'none';
+
+                // Muestra la opción de pago "Punto"
+                if (opcionPunto) opcionPunto.style.display = 'block';
+                
+                // Limpia todos los datos de envío por si el usuario cambió de Delivery a Pickup
                 costoEnvio = 0;
                 distanciaKm = 0;
                 direccionCompleta = '';
                 clienteLat = null;
                 clienteLon = null;
+                document.getElementById('cliente-direccion').value = '';
             }
 
             renderizarProductosAgrupados(productosOriginales);
-            actualizarPanelCarrito(); // Recalcular total
+            actualizarPanelCarrito();
         }
 
         // --- Funciones para el panel del mapa ---
@@ -550,29 +553,34 @@
                 alert('Agregá productos al carrito');
                 return;
             }
+
+            const nombre = document.getElementById('cliente-nombre').value.trim();
+            const apellido = document.getElementById('cliente-apellido').value.trim();
+            const telefono = document.getElementById('cliente-telefono').value.trim();
+            const pago = document.getElementById('cliente-pago').value;
+
+            // --- Validación de campos obligatorios ---
+            if (!nombre || !apellido || !telefono || !pago) {
+                alert('Por favor, completá todos los campos: nombre, apellido, teléfono y método de pago.');
+                return;
+            }
+
+            if (!/^\d+$/.test(telefono)) {
+                alert('El teléfono solo puede contener números.');
+                return;
+            }
+
             if (!tipoEntrega) {
                 alert('Por favor seleccioná Pickup o Delivery');
                 return;
             }
+
             if (tipoEntrega === 'delivery' && costoEnvio <= 0) {
                 alert('Por favor, verifica tu dirección para calcular el costo de envío antes de continuar.');
                 return;
             }
 
-            const nombre = document.getElementById('cliente-nombre').value.trim();
-            const apellido = document.getElementById('cliente-apellido').value.trim();
-            const telefono = document.getElementById('cliente-telefono').value.trim();
             const direccion = document.getElementById('cliente-direccion').value.trim();
-            const pago = document.getElementById('cliente-pago').value;
-
-            if (telefono.length > 16) {
-                alert('El teléfono no puede tener más de 16 dígitos');
-                return;
-            }
-            if (telefono && !/^\d+$/.test(telefono)) {
-                alert('El teléfono solo puede contener números');
-                return;
-            }
 
             let mensaje = '📝 Pedido\n';
             mensaje += '🛒 Productos:\n';
