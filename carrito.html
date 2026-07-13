@@ -104,7 +104,6 @@
                 <input type="text" id="cliente-nombre" placeholder="Nombre">
                 <input type="text" id="cliente-apellido" placeholder="Apellido">
                 <input type="tel" id="cliente-telefono" placeholder="Teléfono" maxlength="16" pattern="[0-9]{0,16}" inputmode="numeric">
-                <input type="hidden" id="cliente-direccion" placeholder="Dirección de envío"> <!-- Ocultamos este campo, se llenará desde el mapa -->
                 <select id="cliente-pago">
                     <option value="" disabled selected hidden>Método de pago</option>
                     <option value="Pago Móvil">Pago Móvil</option>
@@ -113,14 +112,17 @@
                     <option value="Efectivo Bs">Efectivo Bs</option>
                     <option value="Efectivo $">Efectivo $</option>
                 </select>
-                <button type="button" id="btn-verificar-direccion" class="oculto" onclick="abrirMapaVerificacion()" style="width:100%; margin-top:4px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                    🗺️ Verificar Dirección y Costo de Envío
+            </div>
+            <input type="hidden" id="cliente-direccion" placeholder="Dirección de envío"> <!-- Ocultamos este campo, se llenará desde el mapa -->
+            <div class="botones-accion-carrito">
+                <button type="button" id="btn-verificar-direccion" class="oculto" onclick="abrirMapaVerificacion()">
+                    Ingresar direccion 🗺️
+                </button>
+                <button class="btn-enviar-whatsapp" onclick="enviarWhatsApp()">
+                    <img src="/imagen/what.png" alt="WhatsApp">
+                    Enviar pedido
                 </button>
             </div>
-            <button class="btn-enviar-whatsapp" onclick="enviarWhatsApp()">
-                <img src="/imagen/what.png" alt="WhatsApp">
-                Enviar pedido por WhatsApp
-            </button>
         </div>
     </div>
 
@@ -310,15 +312,24 @@
             document.getElementById('btn-pickup').classList.toggle('seleccionado', tipo === 'pickup');
             document.getElementById('btn-delivery').classList.toggle('seleccionado', tipo === 'delivery');
 
-            const direccionInput = document.getElementById('cliente-direccion');
+            const pagoSelect = document.getElementById('cliente-pago');
+            const opcionPunto = pagoSelect.querySelector('option[value="Punto"]');
             const verificarBtn = document.getElementById('btn-verificar-direccion');
 
             if (tipo === 'delivery') {
-                direccionInput.style.display = 'none'; // Mantenemos el campo de dirección principal oculto
-                verificarBtn.style.display = 'block';
+                verificarBtn.classList.remove('oculto');
+                if (opcionPunto) {
+                    opcionPunto.style.display = 'none';
+                }
+                // Si "Punto" estaba seleccionado, se resetea el selector
+                if (pagoSelect.value === 'Punto') {
+                    pagoSelect.value = '';
+                }
             } else {
-                direccionInput.style.display = 'none';
-                verificarBtn.style.display = 'none';
+                if (opcionPunto) {
+                    opcionPunto.style.display = 'block';
+                }
+                verificarBtn.classList.add('oculto');
                 // Resetear costos y datos de envío al cambiar a pickup
                 costoEnvio = 0;
                 distanciaKm = 0;
