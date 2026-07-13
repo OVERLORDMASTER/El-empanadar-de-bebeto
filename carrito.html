@@ -134,9 +134,14 @@
                 Verificar Dirección de Envío
                 <button onclick="toggleMapPanel(false)">✕</button>
             </div>
+            <!-- Barra de búsqueda del mapa -->
+            <div class="map-search-box">
+                <input type="text" id="map-search-input" placeholder="Buscar calle, urbanización...">
+                <button id="map-search-btn">Buscar</button>
+            </div>
             <div id="map-container"></div>
             <div id="map-info">
-                <p id="map-status">Toca en el mapa para marcar tu ubicación.</p>
+                <p id="map-status">Toca en el mapa o usá el buscador para marcar tu ubicación.</p>
                 <button id="btn-confirmar-direccion" class="oculto" onclick="confirmarDireccion()">Confirmar Dirección y Calcular</button>
             </div>
         </div>
@@ -353,7 +358,10 @@
         function inicializarMapa() {
             if (map) return; // Evitar reinicializar
             map = L.map('map-container').setView([miLat, miLon], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                attribution: '© OpenStreetMap',
+                detectRetina: true // Mejora la resolución en pantallas de alta densidad (móviles)
+            }).addTo(map);
             // L.marker([miLat, miLon], { title: 'El Empanadar de Bebeto' }).addTo(map); // Eliminado el marcador inicial del local
 
             map.on('click', function(e) {
@@ -385,13 +393,60 @@
                         document.getElementById('map-status').textContent = 'Error de red. Haz clic en Calcular.';
                     });
             });
+
+            // Event listeners para la búsqueda en el mapa
+            document.getElementById('map-search-btn').addEventListener('click', buscarDireccionEnMapa);
+            document.getElementById('map-search-input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    buscarDireccionEnMapa();
+                }
+            });
+        }
+
+        function buscarDireccionEnMapa() {
+            const query = document.getElementById('map-search-input').value.trim();
+            if (query.length < 3) {
+                alert('Ingresá al menos 3 caracteres para buscar.');
+                return;
+            }
+
+            const statusEl = document.getElementById('map-status');
+            statusEl.textContent = 'Buscando...';
+
+            // Acotar la búsqueda a la ciudad para mejores resultados
+            const searchQuery = `${query}, Barquisimeto, Venezuela`;
+
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const result = data[0];
+                        clienteLat = parseFloat(result.lat);
+                        clienteLon = parseFloat(result.lon);
+                        direccionCompleta = result.display_name;
+
+                        map.setView([clienteLat, clienteLon], 17); // Zoom más cercano al buscar
+
+                        if (mapMarker) mapMarker.setLatLng([clienteLat, clienteLon]);
+                        else mapMarker = L.marker([clienteLat, clienteLon]).addTo(map);
+
+                        statusEl.textContent = 'Ubicación encontrada. Haz clic en Calcular.';
+                        document.getElementById('btn-confirmar-direccion').classList.remove('oculto');
+                    } else {
+                        statusEl.textContent = '❌ No se encontraron resultados. Intentá con otra búsqueda o marcá en el mapa.';
+                    }
+                }).catch(() => {
+                    statusEl.textContent = '❌ Error de red al buscar. Por favor, intentá de nuevo.';
+                });
         }
 
         function abrirMapaVerificacion() { // Se llama desde el botón "Verificar Dirección"
             toggleMapPanel(true);
             inicializarMapa();
             // Reseteamos el estado del modal del mapa
-            document.getElementById('map-status').textContent = 'Toca en el mapa para marcar tu ubicación.';
+            document.getElementById('map-search-input').value = '';
+            document.getElementById('map-status').textContent = 'Toca en el mapa o usá el buscador para marcar tu ubicación.';
             document.getElementById('btn-confirmar-direccion').classList.add('oculto');
             if (mapMarker) {
                 map.removeLayer(mapMarker);

@@ -1764,6 +1764,39 @@ body.login-page .header {
     cursor: pointer;
 }
 
+/* Barra de búsqueda del mapa */
+.map-search-box {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+#map-search-input {
+    flex: 1;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #1a1a1a;
+    color: white;
+    outline: none;
+}
+
+#map-search-input:focus {
+    border-color: var(--vinotinto-claro);
+}
+
+#map-search-btn {
+    padding: 0 16px;
+    background: var(--vinotinto);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
 #map-container {
     height: 45vh;
     width: 100%;
@@ -1793,6 +1826,10 @@ body.login-page .header {
     cursor: pointer;
     font-weight: 600;
     transition: background 0.2s;
+}
+
+#map-search-btn:hover {
+    background: var(--vinotinto-claro);
 }
 
 #map-info button:hover {
