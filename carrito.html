@@ -501,7 +501,7 @@
                     document.getElementById('cliente-direccion').value = direccionCompleta;
                     actualizarPanelCarrito();
                     toggleMapPanel(false);
-                    alert(`¡Dirección confirmada!\n\nDistancia estimada: ${distanciaKm.toFixed(2)} km\nCosto de envío: $${costoEnvio.toFixed(2)}\n\nNota: El costo final se verificará con la ruta de Google Maps.`);
+                    alert(`¡Dirección confirmada!\n\nDistancia estimada: ${distanciaKm.toFixed(2)} km\nCosto de envío: $${costoEnvio.toFixed(2)}\n`);
                 } else { throw new Error('No se pudo calcular la ruta.'); }
             }).catch(() => {
                 document.getElementById('map-status').textContent = '❌ Error al calcular la ruta.';
@@ -726,7 +726,7 @@
                 if (direccion) mensaje += `Ubicación: ${direccion}\n`;
                 mensaje += `Distancia (estimada): ${distanciaKm.toFixed(2)} km\n`;
                 const googleMapsRouteUrl = `https://www.google.com/maps/dir/?api=1&origin=${miLat},${miLon}&destination=${clienteLat},${clienteLon}`;
-                mensaje += `Se usará la ruta de Google Maps para el costo final:\n${googleMapsRouteUrl}\n`;
+                
             }
 
             window.open(`https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`, '_blank');
