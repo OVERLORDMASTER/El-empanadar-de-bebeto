@@ -1768,7 +1768,7 @@ body.login-page .header {
 .map-search-box {
     display: flex;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 #map-search-input {
@@ -1786,8 +1786,15 @@ body.login-page .header {
     border-color: var(--vinotinto-claro);
 }
 
-    #map-search-btn, #btn-current-location {
-    padding: 0 16px;
+.map-buttons-box {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+#map-search-btn, #btn-current-location {
+    flex: 1;
+    padding: 10px 16px;
     background: var(--vinotinto);
     color: white;
     border: none;
@@ -1795,7 +1802,7 @@ body.login-page .header {
     cursor: pointer;
     font-weight: 600;
     transition: background 0.2s;
-        white-space: nowrap;
+    white-space: nowrap;
 }
 
 #map-container {
