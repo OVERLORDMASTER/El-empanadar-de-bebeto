@@ -726,7 +726,7 @@
                 if (direccion) mensaje += `Ubicación: ${direccion}\n`;
                 mensaje += `Distancia (estimada): ${distanciaKm.toFixed(2)} km\n`;
                 if (clienteLat && clienteLon) {
-                    const googleMapsRouteUrl = `https://www.google.com/maps/dir/?api=1&origin=${miLat},${miLon}&destination=${clienteLat},${clienteLon}`;
+                    const googleMapsRouteUrl = `https://www.google.com/maps/dir/${miLat},${miLon}/${clienteLat},${clienteLon}`;
                     mensaje += `Ver en Google Maps: ${googleMapsRouteUrl}\n`;
                 }
             }
