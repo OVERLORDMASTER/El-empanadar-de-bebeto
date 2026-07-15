@@ -138,6 +138,7 @@
             <div class="map-search-box">
                 <input type="text" id="map-search-input" placeholder="Buscar calle, urbanización...">
                 <button id="map-search-btn">Buscar</button>
+                <button id="btn-current-location">Ubicación actual</button>
             </div>
             <div id="map-container"></div>
             <div id="map-info">
@@ -361,22 +362,24 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap' }).addTo(map);
             // L.marker([miLat, miLon], { title: 'El Empanadar de Bebeto' }).addTo(map); // Eliminado el marcador inicial del local
+            
+            function handleLocationFound(lat, lon) {
+                clienteLat = lat;
+                clienteLon = lon;
 
-            map.on('click', function(e) {
-                clienteLat = e.latlng.lat;
-                clienteLon = e.latlng.lng;
+                map.setView([lat, lon], 17); // Centrar mapa en la ubicación
 
                 if (mapMarker) {
-                    mapMarker.setLatLng(e.latlng);
+                    mapMarker.setLatLng([lat, lon]);
                 } else {
-                    mapMarker = L.marker(e.latlng).addTo(map);
+                    mapMarker = L.marker([lat, lon]).addTo(map);
                 }
                 
                 document.getElementById('btn-confirmar-direccion').classList.remove('oculto');
                 document.getElementById('map-status').textContent = 'Ubicación marcada. Obteniendo dirección...';
 
                 // Reverse geocoding para obtener la dirección
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${clienteLat}&lon=${clienteLon}`)
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
                     .then(res => res.json())
                     .then(data => {
                         if (data && data.display_name) {
@@ -390,10 +393,42 @@
                         direccionCompleta = 'Ubicación marcada en mapa';
                         document.getElementById('map-status').textContent = 'Error de red. Haz clic en Calcular.';
                     });
+            }
+
+            map.on('click', function(e) {
+                handleLocationFound(e.latlng.lat, e.latlng.lng);
             });
 
             // Event listeners para la búsqueda en el mapa
             document.getElementById('map-search-btn').addEventListener('click', buscarDireccionEnMapa);
+            document.getElementById('btn-current-location').addEventListener('click', () => {
+                if (!navigator.geolocation) {
+                    return alert('Tu navegador no soporta geolocalización.');
+                }
+                const statusEl = document.getElementById('map-status');
+                statusEl.textContent = 'Obteniendo tu ubicación...';
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        handleLocationFound(position.coords.latitude, position.coords.longitude);
+                    },
+                    (error) => {
+                        let message = 'No se pudo obtener tu ubicación.';
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                message = 'Permiso de ubicación denegado. Por favor, actívalo en los ajustes de tu navegador.';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                message = 'La información de ubicación no está disponible.';
+                                break;
+                            case error.TIMEOUT:
+                                message = 'La solicitud para obtener la ubicación tardó demasiado.';
+                                break;
+                        }
+                        statusEl.textContent = `❌ ${message}`;
+                        alert(message);
+                    }
+                );
+            });
             document.getElementById('map-search-input').addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -464,7 +499,7 @@
                     document.getElementById('cliente-direccion').value = direccionCompleta;
                     actualizarPanelCarrito();
                     toggleMapPanel(false);
-                    alert(`¡Dirección confirmada!\nDistancia: ${distanciaKm.toFixed(2)} km\nCosto de envío: $${costoEnvio.toFixed(2)}`);
+                    alert(`¡Dirección confirmada!\n\nDistancia estimada: ${distanciaKm.toFixed(2)} km\nCosto de envío: $${costoEnvio.toFixed(2)}\n\nNota: El costo final se verificará con la ruta de Google Maps.`);
                 } else { throw new Error('No se pudo calcular la ruta.'); }
             }).catch(() => {
                 document.getElementById('map-status').textContent = '❌ Error al calcular la ruta.';
@@ -665,7 +700,7 @@
                 if (tasaBCV) {
                     costoEnvioBS = formatearBs(costoEnvio).replace('Bs ', '');
                 }
-                mensaje += `Delivery: \n$${costoEnvio.toFixed(2)} (${costoEnvioBS} Bs)\n`;
+                mensaje += `Delivery (Estimado): \n$${costoEnvio.toFixed(2)} (${costoEnvioBS} Bs)\n`;
             }
             mensaje += '\n';
 
@@ -675,7 +710,7 @@
             if (tasaBCV) {
                 totalFinalBS = formatearBs(totalFinal).replace('Bs ', '');
             }
-            mensaje += `TOTAL A PAGAR: \n$${totalFinal.toFixed(2)} (${totalFinalBS} Bs)\n\n`;
+            mensaje += `TOTAL APROXIMADO: \n$${totalFinal.toFixed(2)} (${totalFinalBS} Bs)\n\n`;
 
             // Datos del cliente y entrega
             mensaje += '👤 Información del Cliente:\n\n';
@@ -686,9 +721,10 @@
 
             if (tipoEntrega === 'delivery') {
                 mensaje += '📍 Dirección de Envío:\n\n';
-                mensaje += `Ubicación: ${direccion}\n`;
-                mensaje += `Distancia: ${distanciaKm.toFixed(2)} km\n`;
-                mensaje += `GPS: https://www.google.com/maps/search/?api=1&query=${clienteLat},${clienteLon}\n`;
+                if (direccion) mensaje += `Ubicación: ${direccion}\n`;
+                mensaje += `Distancia (estimada): ${distanciaKm.toFixed(2)} km\n`;
+                const googleMapsRouteUrl = `https://www.google.com/maps/dir/?api=1&origin=${miLat},${miLon}&destination=${clienteLat},${clienteLon}`;
+                mensaje += `Se usará la ruta de Google Maps para el costo final:\n${googleMapsRouteUrl}\n`;
             }
 
             window.open(`https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`, '_blank');
