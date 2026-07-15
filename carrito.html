@@ -725,8 +725,10 @@
                 mensaje += '📍 Dirección de Envío:\n\n';
                 if (direccion) mensaje += `Ubicación: ${direccion}\n`;
                 mensaje += `Distancia (estimada): ${distanciaKm.toFixed(2)} km\n`;
-                const googleMapsRouteUrl = `https://www.google.com/maps/dir/?api=1&origin=${miLat},${miLon}&destination=${clienteLat},${clienteLon}`;
-                
+                if (clienteLat && clienteLon) {
+                    const googleMapsRouteUrl = `https://www.google.com/maps/dir/?api=1&origin=${miLat},${miLon}&destination=${clienteLat},${clienteLon}`;
+                    mensaje += `Ver en Google Maps: ${googleMapsRouteUrl}\n`;
+                }
             }
 
             window.open(`https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`, '_blank');
