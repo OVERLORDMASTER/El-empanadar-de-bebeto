@@ -722,12 +722,12 @@
             mensaje += `Tipo de Entrega: ${tipoEntrega === 'pickup' ? 'Pickup' : 'Delivery'}\n\n`;
 
             if (tipoEntrega === 'delivery') {
-                mensaje += '📍 Dirección de Envío:\n\n';
-                if (direccion) mensaje += `Ubicación: ${direccion}\n`;
+                mensaje += '📍 Información de Envío:\n\n';
+                if (direccion) mensaje += `Referencia: ${direccion}\n`;
                 mensaje += `Distancia (estimada): ${distanciaKm.toFixed(2)} km\n`;
                 if (clienteLat && clienteLon) {
-                    const googleMapsRouteUrl = `https://www.google.com/maps/dir/${miLat},${miLon}/${clienteLat},${clienteLon}`;
-                    mensaje += `Ver en Google Maps: ${googleMapsRouteUrl}\n`;
+                    const googleMapsClientUrl = `https://maps.google.com/?q=${clienteLat},${clienteLon}`;
+                    mensaje += `Ubicación del Cliente (Mapa): ${googleMapsClientUrl}\n`;
                 }
             }
 
