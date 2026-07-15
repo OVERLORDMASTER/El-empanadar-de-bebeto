@@ -648,7 +648,7 @@ h1 {
 .producto-card-carrito .precio-usd {
     font-weight: 700;
     font-size: 0.95rem;
-    color: var(--vinotinto-claro);
+    color: var(--gris-claro);
 }
 
 .producto-card-carrito .precio-bs {
@@ -812,7 +812,7 @@ h1 {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
-    color: var(--vinotinto);
+    color: var(--gris-claro);
     font-weight: 700;
     font-size: 1.2rem;
 }
@@ -1786,7 +1786,7 @@ body.login-page .header {
     border-color: var(--vinotinto-claro);
 }
 
-#map-search-btn {
+    #map-search-btn, #btn-current-location {
     padding: 0 16px;
     background: var(--vinotinto);
     color: white;
@@ -1795,6 +1795,7 @@ body.login-page .header {
     cursor: pointer;
     font-weight: 600;
     transition: background 0.2s;
+        white-space: nowrap;
 }
 
 #map-container {
@@ -1828,7 +1829,7 @@ body.login-page .header {
     transition: background 0.2s;
 }
 
-#map-search-btn:hover {
+    #map-search-btn:hover, #btn-current-location:hover {
     background: var(--vinotinto-claro);
 }
 
