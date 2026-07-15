@@ -618,7 +618,7 @@
             let totalFinal = subtotalUSD;
 
             if (tipoEntrega === 'delivery') {
-                deliveryCostContainer.classList.remove('oculto');
+                deliveryCostContainer.style.display = 'flex';
                 deliveryCostValue.textContent = `$${costoEnvio.toFixed(2)}`;
                 totalFinal += costoEnvio;
                 if (costoEnvio > 0) {
@@ -627,7 +627,7 @@
                     quitarEnvioBtn.classList.add('oculto');
                 }
             } else {
-                deliveryCostContainer.classList.add('oculto');
+                deliveryCostContainer.style.display = 'none';
             }
             totalUsdValue.textContent = `$${totalFinal.toFixed(2)}`;
             totalBsValue.textContent = formatearBs(totalFinal);
