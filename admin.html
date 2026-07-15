@@ -52,7 +52,7 @@
             <div class="login-input-group">
                 <input type="text" id="login-user" placeholder="Usuario" autocomplete="username">
                 <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password">
-                <div id="login-error" class="login-error" style="display:none;">❌ Usuario o contraseña incorrectos</div>
+                <div id="login-error" class="login-error" style="display:none;"></div>
                 <button id="login-btn" class="login-btn">Ingresar</button>
             </div>
         </div>
@@ -151,31 +151,48 @@
         const adminBody = document.getElementById('admin-body');
 
         // ═══ LOGIN ═══
+        const WORKER_URL = "https://login-worker.benjaminandresperaza.workers.dev";
+
         async function intentarLogin() {
             const usuario = loginUser.value.trim();
             const contrasena = loginPass.value.trim();
+            const originalButtonText = loginBtn.textContent;
+
+            // Limpiar mensajes previos y deshabilitar botón
+            loginError.style.display = 'none';
+            loginBtn.textContent = "Verificando...";
+            loginBtn.disabled = true;
 
             try {
-                const response = await fetch('/api/login', {
+                // Enviar la petición de forma segura al Worker de Cloudflare
+                const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: usuario, password: contrasena })
+                    body: JSON.stringify({ usuario, contrasena })
                 });
+
                 const data = await response.json();
 
-                if (response.ok && data.success) {
+                if (response.ok && data.success) { // Login exitoso desde el worker
                     sessionStorage.setItem('adminUser', usuario); // Guardar usuario para otras operaciones
                     loginError.style.display = 'none';
                     loginWrapper.style.display = 'none';
                     adminContent.style.display = 'block';
                     adminBody.classList.remove('login-page');
                     iniciarAdmin();
-                } else {
+                } else { // Error devuelto por el servidor (usuario o clave incorrecta)
+                    loginError.textContent = '❌ ' + (data.error || "Acceso denegado");
                     loginError.style.display = 'block';
                 }
+
             } catch (error) {
-                loginError.style.display = 'none';
-                alert('Error de conexión con el servidor.');
+                // Error de conexión o de red
+                loginError.textContent = "❌ Error de conexión. No se pudo verificar.";
+                loginError.style.display = 'block';
+            } finally {
+                // Restaurar botón
+                loginBtn.textContent = originalButtonText;
+                loginBtn.disabled = false;
             }
         }
 
@@ -333,48 +350,6 @@
             }
         }
 
-        // ─── Cambio de contraseña ───
-        document.getElementById('password-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const oldPassword = document.getElementById('old-password').value;
-            const newPassword = document.getElementById('new-password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
-            const username = sessionStorage.getItem('adminUser');
-            const mensajeEl = document.getElementById('password-mensaje');
-
-            if (newPassword !== confirmPassword) {
-                mensajeEl.textContent = '❌ Las nuevas contraseñas no coinciden.';
-                mensajeEl.style.color = '#f88';
-                mensajeEl.style.display = 'block';
-                return;
-            }
-
-            if (!username) {
-                alert('Error de sesión. Por favor, volvé a iniciar sesión.');
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/user/change-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, oldPassword, newPassword })
-                });
-                const data = await res.json();
-                mensajeEl.textContent = data.message;
-                mensajeEl.style.color = res.ok ? '#4caf50' : '#f88';
-                mensajeEl.style.display = 'block';
-
-                if (res.ok) {
-                    document.getElementById('password-form').reset();
-                }
-            } catch (e) {
-                mensajeEl.textContent = '❌ Error de conexión con el servidor.';
-                mensajeEl.style.color = '#f88';
-                mensajeEl.style.display = 'block';
-            }
-        });
-
         // ─── Productos ───
         async function cargarProductos() {
             try {
@@ -515,54 +490,13 @@
             }
         }
 
-        // ─── Cambio de contraseña ───
-        document.getElementById('password-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const oldPassword = document.getElementById('old-password').value;
-            const newPassword = document.getElementById('new-password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
-            const username = sessionStorage.getItem('adminUser');
-            const mensajeEl = document.getElementById('password-mensaje');
-
-            if (newPassword !== confirmPassword) {
-                mensajeEl.textContent = '❌ Las nuevas contraseñas no coinciden.';
-                mensajeEl.style.color = '#f88';
-                mensajeEl.style.display = 'block';
-                return;
-            }
-
-            if (!username) {
-                alert('Error de sesión. Por favor, volvé a iniciar sesión.');
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/user/change-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, oldPassword, newPassword })
-                });
-                const data = await res.json();
-                mensajeEl.textContent = data.message;
-                mensajeEl.style.color = res.ok ? '#4caf50' : '#f88';
-                mensajeEl.style.display = 'block';
-
-                if (res.ok) {
-                    document.getElementById('password-form').reset();
-                }
-            } catch (e) {
-                mensajeEl.textContent = '❌ Error de conexión con el servidor.';
-                mensajeEl.style.color = '#f88';
-                mensajeEl.style.display = 'block';
-            }
-        });
-
         // ─── Inicialización ───
         async function iniciarAdmin() {
             await obtenerTasa();
             await cargarProductos();
             await cargarCategorias();
         }
+
     </script>
 </body>
 </html>
