@@ -11,15 +11,16 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ═══════════════════════════════════════════════
-// DIRECTORIOS
+// DIRECTORIOS Y ALMACENAMIENTO PERSISTENTE
 // ═══════════════════════════════════════════════
 const ROOT_DIR = __dirname;
-const LOADS_DIR = path.join(ROOT_DIR, 'loadspro');
+// Carpeta persistente para imágenes y base de datos (ideal para Render Persistent Disk)
+const LOADS_DIR = process.env.DATA_DIR || path.join(ROOT_DIR, 'loadspro');
 
 if (!fs.existsSync(LOADS_DIR)) {
     try {
         fs.mkdirSync(LOADS_DIR, { recursive: true });
-        console.log('✅ Carpeta loadspro creada en:', LOADS_DIR);
+        console.log('✅ Carpeta persistente loadspro creada en:', LOADS_DIR);
     } catch (error) {
         console.error('❌ No se pudo crear la carpeta loadspro:', error.message);
         process.exit(1);
@@ -39,61 +40,48 @@ try {
 }
 
 // ═══════════════════════════════════════════════
-// MIDDLEWARE
+// BASE DE DATOS (DENTRO DE LOADSPRO)
+// ═══════════════════════════════════════════════
+const DB_PATH = path.join(LOADS_DIR, 'productos.db');
+const OLD_DB_PATH = path.join(ROOT_DIR, 'productos.db');
+
+// Migración automática si existe una base de datos previa en la raíz y no en loadspro
+if (!fs.existsSync(DB_PATH) && fs.existsSync(OLD_DB_PATH)) {
+    try {
+        fs.copyFileSync(OLD_DB_PATH, DB_PATH);
+        console.log('📦 Base de datos copiada exitosamente a loadspro/productos.db');
+        if (fs.existsSync(OLD_DB_PATH + '-wal')) {
+            try { fs.copyFileSync(OLD_DB_PATH + '-wal', DB_PATH + '-wal'); } catch(e){}
+        }
+        if (fs.existsSync(OLD_DB_PATH + '-shm')) {
+            try { fs.copyFileSync(OLD_DB_PATH + '-shm', DB_PATH + '-shm'); } catch(e){}
+        }
+    } catch (err) {
+        console.error('⚠️ Error al migrar base de datos a loadspro:', err.message);
+    }
+}
+
+const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL');
+
+// ═══════════════════════════════════════════════
+// MIDDLEWARE Y SEGURIDAD
 // ═══════════════════════════════════════════════
 app.use(cors());
 app.use(express.json());
+
+// Proteger archivos de base de datos, backups y sensibles contra descargas públicas
+app.use((req, res, next) => {
+    const cleanUrl = req.path.toLowerCase();
+    const forbiddenExts = ['.db', '.db-wal', '.db-shm', '.sqlite', '.sqlite3', '.sql', '.env', '.lock', '.log', '.test_write'];
+    if (forbiddenExts.some(ext => cleanUrl.endsWith(ext)) || cleanUrl.includes('..') || cleanUrl.includes('/.')) {
+        return res.status(403).json({ error: 'Acceso denegado a archivos protegidos' });
+    }
+    next();
+});
+
 app.use(express.static(ROOT_DIR));
 app.use('/loadspro', express.static(LOADS_DIR));
-
-// Middleware para evitar caché en las respuestas de la API
-const noCache = (req, res, next) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    next();
-};
-
-// ═══════════════════════════════════════════════
-// MULTER (SUBIDA DE IMÁGENES)
-// ═══════════════════════════════════════════════
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, LOADS_DIR),
-    filename: (req, file, cb) => {
-        const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
-        cb(null, uniqueName);
-    }
-});
-
-const upload = multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        const tipos = /jpeg|jpg|png|gif|webp/;
-        const ext = tipos.test(path.extname(file.originalname).toLowerCase());
-        const mime = tipos.test(file.mimetype);
-        if (ext && mime) {
-            cb(null, true);
-        } else {
-            cb(new Error('Formato no permitido. Solo: jpg, png, gif, webp'));
-        }
-    }
-});
-
-const uploadMiddleware = (req, res, next) => {
-    upload.single('imagen')(req, res, (err) => {
-        if (err) {
-            return res.status(400).json({ error: err.message });
-        }
-        next();
-    });
-};
-
-// ═══════════════════════════════════════════════
-// BASE DE DATOS
-// ═══════════════════════════════════════════════
-const db = new Database(path.join(ROOT_DIR, 'productos.db'));
-db.pragma('journal_mode = WAL');
 
 // ─── Crear tablas si no existen ───
 db.exec(`
@@ -146,6 +134,12 @@ if (!tableInfoProds.some(col => col.name === 'tipo_entrega')) {
     console.log('✅ Columna "tipo_entrega" agregada a productos');
 }
 
+// ─── Agregar columna 'opciones_incluidas' si no existe en productos ───
+if (!tableInfoProds.some(col => col.name === 'opciones_incluidas')) {
+    db.exec('ALTER TABLE productos ADD COLUMN opciones_incluidas TEXT DEFAULT NULL');
+    console.log('✅ Columna "opciones_incluidas" agregada a productos');
+}
+
 // ─── Asignar orden inicial a categorías existentes si todas tienen 0 ───
 const categoriasSinOrden = db.prepare('SELECT id FROM categorias WHERE orden = 0').all();
 if (categoriasSinOrden.length > 0) {
@@ -179,6 +173,51 @@ if (userCount === 0) {
 }
 
 // ═══════════════════════════════════════════════
+// MIDDLEWARES DE UTILIDAD Y CARGA DE ARCHIVOS
+// ═══════════════════════════════════════════════
+
+// Middleware para evitar caché en las respuestas de la API
+const noCache = (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+};
+
+// Configuración de Multer para almacenar imágenes en la carpeta persistente LOADS_DIR
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, LOADS_DIR),
+    filename: (req, file, cb) => {
+        const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname);
+        cb(null, uniqueName);
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const tipos = /jpeg|jpg|png|gif|webp/;
+        const ext = tipos.test(path.extname(file.originalname).toLowerCase());
+        const mime = tipos.test(file.mimetype);
+        if (ext && mime) {
+            cb(null, true);
+        } else {
+            cb(new Error('Formato no permitido. Solo: jpg, png, gif, webp'));
+        }
+    }
+});
+
+const uploadMiddleware = (req, res, next) => {
+    upload.single('imagen')(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        next();
+    });
+};
+
+// ═══════════════════════════════════════════════
 // FUNCIÓN AUXILIAR: obtener o crear categoría con orden
 // ═══════════════════════════════════════════════
 function obtenerOCrearCategoria(nombre) {
@@ -206,65 +245,127 @@ app.get('/api/productos', noCache, (req, res) => {
         LEFT JOIN categorias c ON p.categoria_id = c.id
         ORDER BY c.orden ASC NULLS LAST, p.nombre ASC
     `).all();
-    res.json(productos.map(p => ({
-        ...p,
-        imagen: p.imagen ? `/loadspro/${p.imagen}` : null
-    })));
+    res.json(productos.map(p => {
+        let opciones = null;
+        if (p.opciones_incluidas) {
+            try {
+                opciones = typeof p.opciones_incluidas === 'string' ? JSON.parse(p.opciones_incluidas) : p.opciones_incluidas;
+            } catch (e) {
+                opciones = p.opciones_incluidas;
+            }
+        }
+        return {
+            ...p,
+            precio_usd: (p.precio_usd !== null && p.precio_usd !== undefined && p.precio_usd > 0) ? parseFloat(p.precio_usd) : 0,
+            imagen: p.imagen ? `/loadspro/${p.imagen}` : null,
+            opciones_incluidas: opciones
+        };
+    }));
 });
+
+function normalizarOpcionesStr(val) {
+    if (!val) return null;
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (!trimmed || trimmed === '[]' || trimmed === 'null') return null;
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed) && parsed.length === 0) return null;
+            return JSON.stringify(parsed);
+        } catch(e) {
+            return trimmed;
+        }
+    }
+    if (Array.isArray(val)) {
+        return val.length > 0 ? JSON.stringify(val) : null;
+    }
+    return JSON.stringify(val);
+}
 
 // Crear producto
 app.post('/api/productos', noCache, uploadMiddleware, (req, res) => {
-    const { nombre, precio_usd, caracteristica, categoria, tipo_entrega } = req.body;
-    if (!nombre || !precio_usd || !caracteristica) {
-        return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+    const { nombre, precio_usd, caracteristica, categoria, tipo_entrega, opciones_incluidas } = req.body;
+    if (!nombre || !caracteristica) {
+        return res.status(400).json({ error: 'El nombre y la característica son obligatorios' });
     }
+    const precioNum = (precio_usd !== undefined && precio_usd !== '' && precio_usd !== null && !isNaN(parseFloat(precio_usd)))
+        ? parseFloat(precio_usd)
+        : 0;
+
     const imagen = req.file ? req.file.filename : null;
     const catId = obtenerOCrearCategoria(categoria);
     const entrega = tipo_entrega || 'ambos';
+    const opcionesStr = normalizarOpcionesStr(opciones_incluidas);
 
     const stmt = db.prepare(`
-        INSERT INTO productos (nombre, precio_usd, caracteristica, imagen, categoria_id, tipo_entrega)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO productos (nombre, precio_usd, caracteristica, imagen, categoria_id, tipo_entrega, opciones_incluidas)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    const result = stmt.run(nombre, precio_usd, caracteristica, imagen, catId, entrega);
+    const result = stmt.run(nombre, precioNum, caracteristica, imagen, catId, entrega, opcionesStr);
     res.status(201).json({ 
         id: result.lastInsertRowid, 
         nombre, 
-        precio_usd, 
+        precio_usd: precioNum, 
         caracteristica, 
         imagen, 
         categoria_id: catId,
-        tipo_entrega: entrega
+        tipo_entrega: entrega,
+        opciones_incluidas: opcionesStr ? JSON.parse(opcionesStr) : null
     });
 });
 
 // Actualizar producto
 app.put('/api/productos/:id', noCache, uploadMiddleware, (req, res) => {
     const { id } = req.params;
-    const { nombre, precio_usd, caracteristica, categoria, tipo_entrega } = req.body;
+    const { nombre, precio_usd, caracteristica, categoria, tipo_entrega, opciones_incluidas } = req.body;
+    if (!nombre || !caracteristica) {
+        return res.status(400).json({ error: 'El nombre y la característica son obligatorios' });
+    }
+    const precioNum = (precio_usd !== undefined && precio_usd !== '' && precio_usd !== null && !isNaN(parseFloat(precio_usd)))
+        ? parseFloat(precio_usd)
+        : 0;
+
     const nuevaImagen = req.file ? req.file.filename : undefined;
     const catId = obtenerOCrearCategoria(categoria);
     const entrega = tipo_entrega || 'ambos';
+    const opcionesStr = normalizarOpcionesStr(opciones_incluidas);
 
     if (nuevaImagen) {
+        // Eliminar imagen anterior si existía
+        const prodAnterior = db.prepare('SELECT imagen FROM productos WHERE id=?').get(id);
+        if (prodAnterior && prodAnterior.imagen) {
+            const imgPath = path.join(LOADS_DIR, prodAnterior.imagen);
+            if (fs.existsSync(imgPath)) {
+                try { fs.unlinkSync(imgPath); } catch(e){}
+            }
+        }
+
         db.prepare(`
             UPDATE productos
-            SET nombre=?, precio_usd=?, caracteristica=?, imagen=?, categoria_id=?, tipo_entrega=?
+            SET nombre=?, precio_usd=?, caracteristica=?, imagen=?, categoria_id=?, tipo_entrega=?, opciones_incluidas=?
             WHERE id=?
-        `).run(nombre, precio_usd, caracteristica, nuevaImagen, catId, entrega, id);
+        `).run(nombre, precioNum, caracteristica, nuevaImagen, catId, entrega, opcionesStr, id);
     } else {
         db.prepare(`
             UPDATE productos
-            SET nombre=?, precio_usd=?, caracteristica=?, categoria_id=?, tipo_entrega=?
+            SET nombre=?, precio_usd=?, caracteristica=?, categoria_id=?, tipo_entrega=?, opciones_incluidas=?
             WHERE id=?
-        `).run(nombre, precio_usd, caracteristica, catId, entrega, id);
+        `).run(nombre, precioNum, caracteristica, catId, entrega, opcionesStr, id);
     }
     res.json({ mensaje: 'Producto actualizado' });
 });
 
 // Eliminar producto
 app.delete('/api/productos/:id', noCache, (req, res) => {
-    db.prepare('DELETE FROM productos WHERE id=?').run(req.params.id);
+    const { id } = req.params;
+    const prodAnterior = db.prepare('SELECT imagen FROM productos WHERE id=?').get(id);
+    if (prodAnterior && prodAnterior.imagen) {
+        const imgPath = path.join(LOADS_DIR, prodAnterior.imagen);
+        if (fs.existsSync(imgPath)) {
+            try { fs.unlinkSync(imgPath); } catch(e){}
+        }
+    }
+    db.prepare('DELETE FROM productos WHERE id=?').run(id);
     res.json({ mensaje: 'Producto eliminado' });
 });
 
@@ -308,6 +409,41 @@ app.put('/api/configuracion/:key', noCache, (req, res) => {
 app.get('/api/categorias', noCache, (req, res) => {
     const categorias = db.prepare('SELECT * FROM categorias ORDER BY orden ASC, nombre ASC').all();
     res.json(categorias);
+});
+
+// Crear nueva categoría directamente
+app.post('/api/categorias', noCache, (req, res) => {
+    const { nombre } = req.body;
+    if (!nombre || !nombre.trim()) {
+        return res.status(400).json({ error: 'El nombre de la categoría es requerido' });
+    }
+    const catId = obtenerOCrearCategoria(nombre.trim());
+    const cat = db.prepare('SELECT * FROM categorias WHERE id = ?').get(catId);
+    res.json(cat);
+});
+
+// Editar categoría (actualizar nombre)
+app.put('/api/categorias/:id', noCache, (req, res) => {
+    const { id } = req.params;
+    const { nombre } = req.body;
+    if (!nombre || !nombre.trim()) {
+        return res.status(400).json({ error: 'El nombre de la categoría es requerido' });
+    }
+    const nombreLimpio = nombre.trim();
+
+    // Verificar si ya existe otra categoría con el mismo nombre
+    const existente = db.prepare('SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?) AND id != ?').get(nombreLimpio, id);
+    if (existente) {
+        return res.status(400).json({ error: 'Ya existe otra categoría con ese nombre' });
+    }
+
+    const info = db.prepare('UPDATE categorias SET nombre = ? WHERE id = ?').run(nombreLimpio, id);
+    if (info.changes === 0) {
+        return res.status(404).json({ error: 'Categoría no encontrada' });
+    }
+
+    const catActualizada = db.prepare('SELECT * FROM categorias WHERE id = ?').get(id);
+    res.json(catActualizada);
 });
 
 // Eliminar categoría (los productos quedan sin categoría)
@@ -426,6 +562,7 @@ app.use((err, req, res, next) => {
 // ═══════════════════════════════════════════════
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`📁 Archivos estáticos: ${ROOT_DIR}`);
-    console.log(`🖼️ Imágenes guardadas en: ${LOADS_DIR}`);
+    console.log(`📁 Archivos estáticos web: ${ROOT_DIR}`);
+    console.log(`💾 Base de datos SQLite guardada en: ${DB_PATH}`);
+    console.log(`🖼️ Imágenes y archivos persistentes en: ${LOADS_DIR}`);
 });

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="shortcut icon" href="/imagen/logo-trans.png" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body id="admin-body" class="login-page">
     <!-- Header -->
     <header class="header">
@@ -32,7 +34,8 @@
             <a href="https://facebook.com/tupagina" target="_blank" rel="noopener" class="red-btn facebook">
                 <img src="/imagen/redes/face.svg" alt="Facebook">
             </a>
-            <a href="https://www.instagram.com/elempanadar.bebeto?igsh=MTUzZ2pqZ2hjeWNtMg==" target="_blank" rel="noopener" class="red-btn instagram">
+            <a href="https://www.instagram.com/elempanadar.bebeto?igsh=MTUzZ2pqZ2hjeWNtMg==" target="_blank"
+                rel="noopener" class="red-btn instagram">
                 <img src="/imagen/redes/ing.svg" alt="Instagram">
             </a>
             <a href="https://wa.me/584122845905" target="_blank" rel="noopener" class="red-btn whatsapp">
@@ -60,102 +63,305 @@
 
     <!-- ═══ ADMIN CONTENT ═══ -->
     <div class="contenedor admin-contenedor" id="admin-content" style="display:none;">
-        <h1>Administrar Productos</h1>
-        <div class="tasa-info" id="tasa-info">Cargando tasa del día...</div>
-        <form id="producto-form" enctype="multipart/form-data">
-            <input type="hidden" id="edit-id">
-            <input type="text" id="nombre" placeholder="Nombre" required>
-            <input type="number" step="0.01" id="precio" placeholder="Precio USD" required>
-            <textarea id="caracteristica" placeholder="Característica" required></textarea>
 
-            <!-- Campo de texto para la categoría -->
-            <input type="text" id="categoria-input" placeholder="Categoría (ej: Empanadas, Bebidas, etc.)">
-
-            <!-- Selector de tipo de entrega -->
-            <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap; margin:5px 0;">
-                <label style="color:var(--gris-claro); font-weight:600;">Disponible para:</label>
-                <label style="display:flex; align-items:center; gap:5px; color:white;">
-                    <input type="radio" name="tipo_entrega" value="delivery"> Delivery
-                </label>
-                <label style="display:flex; align-items:center; gap:5px; color:white;">
-                    <input type="radio" name="tipo_entrega" value="pickup"> Pickup
-                </label>
-                <label style="display:flex; align-items:center; gap:5px; color:white;">
-                    <input type="radio" name="tipo_entrega" value="ambos" checked> Ambos
-                </label>
-            </div>
-
-            <div class="file-upload-wrapper">
-                <label for="imagen-file" class="file-upload-label">Seleccionar archivo</label>
-                <input type="file" id="imagen-file" accept="image/*" onchange="previsualizarImagen(event)">
-                <span id="file-name">Sin archivos seleccionados</span>
-            </div>
-
-            <div class="preview" id="preview-container" style="display:none;">
-                <img id="preview-img" src="" alt="Previsualización">
-            </div>
-            <button type="submit">Guardar producto</button>
-        </form>
-        <div id="mensaje-error" style="color:#f88; margin-bottom:10px; display:none;"></div>
-
-        <div style="overflow-x: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Img</th>
-                        <th>Nombre</th>
-                        <th>USD</th>
-                        <th>Bs</th>
-                        <th>Característica</th>
-                        <th>Categoría</th>
-                        <th>Entrega</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="productos-body"></tbody>
-            </table>
+        <!-- Header Principal & Tasa Live -->
+        <div class="admin-header-box">
+            <h1>⚙️ Panel de Administración</h1>
+            <div class="tasa-info" id="tasa-info">Cargando tasa del día...</div>
         </div>
 
-        <hr style="border-color:#444; margin:40px 0 20px;">
+        <!-- ═══════════════════════════════════════════════════════════════
+             MÓDULO 1: 🛍️ GESTIÓN DE PRODUCTOS
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="admin-module-card" id="modulo-productos">
+            <div class="admin-module-title">
+                <span class="module-icon">🛍️</span>
+                <span>Agregar / Editar Producto</span>
+            </div>
 
-        <!-- ═══ TABLA DE CATEGORÍAS ORDENABLE ═══ -->
-        <h2 style="color:var(--vinotinto); text-align:center;">Ordenar Categorías</h2>
-        <p style="text-align:center; color:var(--gris-claro); font-size:0.85rem; margin-bottom:10px;">
-            Usá los botones ▲ y ▼ para cambiar el orden en que aparecen en el carrito.
-        </p>
-        <div style="overflow-x: auto;">
-            <table id="tabla-categorias">
-                <thead>
-                    <tr>
-                        <th>Orden</th>
-                        <th>Nombre</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="categorias-body"></tbody>
-            </table>
+            <form id="producto-form" class="admin-form" enctype="multipart/form-data">
+                <input type="hidden" id="edit-id">
+
+                <div class="admin-form-group">
+                    <label for="nombre">Nombre del producto *</label>
+                    <input type="text" id="nombre" class="admin-input" required>
+                </div>
+
+                <div class="admin-form-group">
+                    <label for="precio">
+                        <span>Precio en USD ($)</span>
+                        <small>dejar vacio si es un producto con vinculacion</small>
+                    </label>
+                    <input type="number" step="0.01" min="0" id="precio" class="admin-input">
+                </div>
+
+                <div class="admin-form-group">
+                    <label for="caracteristica">Descripción o característica *</label>
+                    <textarea id="caracteristica" class="admin-textarea" required></textarea>
+                </div>
+
+                <!-- Selector y Gestión de Categoría -->
+                <div class="admin-form-group">
+                    <label for="categoria-select">Categoría del producto:</label>
+                    <div class="categoria-controles-row">
+                        <div class="categoria-select-wrap">
+                            <select id="categoria-select" class="admin-select">
+                                <option value="">-- Seleccionar categoría --</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-cat-accion btn-cat-agregar" id="btn-cat-agregar"
+                            onclick="abrirAgregarCategoria()" title="Crear nueva categoría">
+                            ➕ Nueva
+                        </button>
+                        <button type="button" class="btn-cat-accion btn-cat-editar" id="btn-cat-editar"
+                            onclick="abrirEditarCategoriaSeleccionada()"
+                            title="Editar nombre de la categoría seleccionada">
+                            ✏️ Editar
+                        </button>
+                        <button type="button" class="btn-cat-accion btn-cat-eliminar" id="btn-cat-eliminar"
+                            onclick="eliminarCategoriaSeleccionada()" title="Eliminar categoría seleccionada">
+                            🗑️ Borrar
+                        </button>
+                    </div>
+
+                    <!-- Contenedor desplegable para escribir y guardar nueva categoría -->
+                    <div id="nueva-cat-contenedor" class="categoria-crear-box" style="display:none;">
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="categoria-nueva-input" class="admin-input" style="margin:0;"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarGuardarNuevaCategoria();}">
+                            <button type="button" class="admin-btn-secondary" onclick="confirmarGuardarNuevaCategoria()"
+                                style="background:#27ae60; color:#fff; border:none;">
+                                Guardar
+                            </button>
+                            <button type="button" class="admin-btn-secondary" onclick="cancelarNuevaCategoria()"
+                                style="padding:8px 12px;">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                    <div id="categoria-feedback"
+                        style="display:none; font-size:0.85rem; font-weight:600; margin-top:3px;"></div>
+                </div>
+
+                <!-- Selector de opciones / aderezos incluidos -->
+                <div class="admin-form-group"
+                    style="background:rgba(255,255,255,0.02); padding:12px; border-radius:10px; border:1px solid #333;">
+                    <label>
+                        <span>productos vinculados (a elegir por el cliente):</span>
+                        <small>Opcional</small>
+                    </label>
+                    <div
+                        style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                        <p style="color:#aaa; font-size:0.78rem; margin:0;">
+                            Marca los productos que el cliente podrá distribuir al pedir este producto.
+                        </p>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="btn-grupos-toggle"
+                                onclick="toggleTodasCategoriasAderezos(true)"
+                                style="padding:3px 8px; font-size:0.73rem;">
+                                🔽 Abrir todas
+                            </button>
+                            <button type="button" class="btn-grupos-toggle"
+                                onclick="toggleTodasCategoriasAderezos(false)"
+                                style="padding:3px 8px; font-size:0.73rem;">
+                                🔼 Cerrar todas
+                            </button>
+                        </div>
+                    </div>
+                    <div id="aderezos-container" class="aderezos-chips-wrapper">
+                        <span style="color:#666; font-size:0.8rem;">Cargando aderezos...</span>
+                    </div>
+                </div>
+
+                <!-- Selector de tipo de entrega -->
+                <div class="admin-form-group">
+                    <label>Modalidad de entrega disponible:</label>
+                    <div class="entrega-radios-container">
+                        <label class="entrega-chip-radio">
+                            <input type="radio" name="tipo_entrega" value="delivery">
+                            <span>📦 Delivery</span>
+                        </label>
+                        <label class="entrega-chip-radio">
+                            <input type="radio" name="tipo_entrega" value="pickup">
+                            <span>🏪 Pickup</span>
+                        </label>
+                        <label class="entrega-chip-radio">
+                            <input type="radio" name="tipo_entrega" value="ambos" checked>
+                            <span>✅ Ambos</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Subida de Imagen -->
+                <div class="admin-form-group">
+                    <label>Foto del producto:</label>
+                    <div class="file-upload-wrapper">
+                        <label for="imagen-file" class="file-upload-label">📁 Subir Imagen</label>
+                        <input type="file" id="imagen-file" accept="image/*" onchange="previsualizarImagen(event)">
+                        <span id="file-name">Sin archivos seleccionados</span>
+                    </div>
+                    <div class="preview" id="preview-container" style="display:none;">
+                        <div class="preview-card">
+                            <div class="preview-header">
+                                <span class="preview-badge">📷 Vista previa</span>
+                                <button type="button" class="btn-quitar-preview" onclick="quitarImagenSeleccionada()" title="Quitar imagen seleccionada">✕ Quitar</button>
+                            </div>
+                            <div class="preview-img-wrap">
+                                <img id="preview-img" src="" alt="Previsualización">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="admin-btn-primary" id="btn-guardar-producto">
+                    💾 Guardar producto
+                </button>
+            </form>
+            <div id="mensaje-error"
+                style="color:#f88; margin-top:10px; display:none; font-weight:600; text-align:center;"></div>
+
+            <!-- Botón Desplegable: Ver Productos Cargados -->
+            <div style="margin-top: 18px;">
+                <button type="button" class="admin-toggle-btn" id="btn-toggle-productos"
+                    onclick="toggleSeccionAdmin('panel-productos-cargados', 'btn-toggle-productos')">
+                    <span class="toggle-btn-left">
+                        📦 Ver productos cargados
+                        <span class="badge-contador" id="contador-productos">0</span>
+                    </span>
+                    <span class="toggle-chevron">▼</span>
+                </button>
+
+                <div class="admin-collapsible-panel" id="panel-productos-cargados">
+                    <p class="admin-panel-sub">
+                        Listado completo de productos registrados en el menú, organizado por categorías. Puedes
+                        editarlos o eliminarlos directamente.
+                    </p>
+                    <div id="productos-por-categoria-container" class="admin-cat-grupos-container">
+                        <!-- Se llena dinámicamente por categorías en cargarProductos() -->
+                    </div>
+                </div>
+            </div>
         </div>
-        <div id="categoria-mensaje" style="margin:10px 0; display:none; text-align:center; font-weight:bold;"></div>
 
-        <hr style="border-color:#444; margin:40px 0 20px;">
+        <!-- ═══════════════════════════════════════════════════════════════
+             MÓDULO 2: 🏷️ GESTIÓN DE CATEGORÍAS
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="admin-module-card" id="modulo-categorias">
+            <button type="button" class="admin-toggle-btn" id="btn-toggle-categorias"
+                onclick="toggleSeccionAdmin('panel-gestionar-categorias', 'btn-toggle-categorias')">
+                <span class="toggle-btn-left">
+                    🏷️ Gestionar categorías
+                    <span class="badge-contador" id="contador-categorias">0</span>
+                </span>
+                <span class="toggle-chevron">▼</span>
+            </button>
 
-        <!-- ═══ GESTIÓN DE HORARIO ═══ -->
-        <h2 style="color:var(--vinotinto); text-align:center;">Estado del Negocio</h2>
-        <p style="text-align:center; color:var(--gris-claro); font-size:0.85rem; margin-bottom:10px;">
-            Controla si se pueden recibir pedidos.
-        </p>
-        <div class="horario-control-wrapper">
-            <select id="estado-negocio-select">
-                <option value="normal">Horario Completo (8am-12pm y 6pm-12am)</option>
-                <option value="solo_noche">Solo Noche (6pm - 12am)</option>
-                <option value="solo_manana">Solo Mañana (8am - 12pm)</option>
-                <option value="cerrado">Cerrado (Todo el día)</option>
-            </select>
-            <button id="btn-guardar-horario">Guardar Estado</button>
+            <div class="admin-collapsible-panel" id="panel-gestionar-categorias">
+                <p class="admin-panel-sub">
+                    Usa los botones <strong>▲</strong> y <strong>▼</strong> para cambiar el orden en que aparecen las
+                    categorías en el menú del cliente. (Las categorías se crean y editan en el formulario de productos
+                    arriba).
+                </p>
+
+                <!-- Lista de categorías moderna -->
+                <div class="categoria-lista-container" id="categorias-lista-container">
+                    <!-- Se llena dinámicamente con cargarCategorias() -->
+                </div>
+                <div id="categoria-mensaje" style="margin:10px 0 0; display:none; text-align:center; font-weight:bold;">
+                </div>
+            </div>
         </div>
-        <div id="horario-mensaje" style="margin:10px 0; display:none; text-align:center; font-weight:bold;"></div>
 
-        <a href="carrito.html" class="volver">← Ir al carrito</a>
+        <!-- ═══════════════════════════════════════════════════════════════
+             MÓDULO 3: 💵 CONFIGURACIÓN DE TASA DE CAMBIO
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="admin-module-card" id="modulo-tasa">
+            <button type="button" class="admin-toggle-btn" id="btn-toggle-tasa"
+                onclick="toggleSeccionAdmin('panel-gestionar-tasa', 'btn-toggle-tasa')">
+                <span class="toggle-btn-left">
+                    💵 Gestionar tasa de cambio
+                    <span class="badge-resumen-pill" id="badge-tasa-resumen">Auto</span>
+                </span>
+                <span class="toggle-chevron">▼</span>
+            </button>
+
+            <div class="admin-collapsible-panel" id="panel-gestionar-tasa">
+                <p class="admin-panel-sub">
+                    Elige entre actualización automática oficial BCV o establecer una tasa fija manual.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:14px; max-width:480px; margin:0 auto;">
+                    <div class="tasa-radios-container">
+                        <label class="tasa-chip-radio">
+                            <input type="radio" name="admin_tasa_modo" value="auto" id="admin-tasa-auto"
+                                onchange="cambiarModoTasaAdminUI()">
+                            <span>🤖 Auto (API BCV)</span>
+                        </label>
+                        <label class="tasa-chip-radio">
+                            <input type="radio" name="admin_tasa_modo" value="manual" id="admin-tasa-manual"
+                                onchange="cambiarModoTasaAdminUI()">
+                            <span>✏️ Manual</span>
+                        </label>
+                    </div>
+
+                    <div id="admin-seccion-tasa-manual" class="oculto"
+                        style="display:flex; align-items:center; justify-content:center; gap:10px; background:#181818; padding:12px; border-radius:10px; border:1px solid #333;">
+                        <label for="admin-input-tasa-manual"
+                            style="color:#ddd; font-weight:600; white-space:nowrap;">Tasa (Bs/$):</label>
+                        <input type="number" id="admin-input-tasa-manual" class="admin-input" step="0.01" min="0.01"
+                            style="max-width:160px; text-align:center; font-weight:700;">
+                    </div>
+
+                    <button type="button" class="admin-btn-primary" id="btn-guardar-tasa-admin"
+                        onclick="guardarTasaAdmin()">
+                        💾 Guardar Tasa de Cambio
+                    </button>
+                    <div id="admin-tasa-mensaje"
+                        style="margin:5px 0 0; display:none; text-align:center; font-weight:bold;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             MÓDULO 4: 🏪 ESTADO DEL NEGOCIO
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="admin-module-card" id="modulo-estado">
+            <button type="button" class="admin-toggle-btn" id="btn-toggle-estado"
+                onclick="toggleSeccionAdmin('panel-gestionar-estado', 'btn-toggle-estado')">
+                <span class="toggle-btn-left">
+                    🏪 Estado del negocio
+                    <span class="badge-resumen-pill" id="badge-estado-resumen">🟢 Horario Completo</span>
+                </span>
+                <span class="toggle-chevron">▼</span>
+            </button>
+
+            <div class="admin-collapsible-panel" id="panel-gestionar-estado">
+                <p class="admin-panel-sub">
+                    Controla el horario de atención y si la plataforma está disponible para recibir pedidos.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:14px; max-width:480px; margin:0 auto;">
+                    <div class="admin-form-group">
+                        <label for="estado-negocio-select">Modalidad de apertura:</label>
+                        <select id="estado-negocio-select" class="admin-select" style="font-weight:600;">
+                            <option value="normal">🕒 Horario Completo (8am-12pm y 6pm-12am)</option>
+                            <option value="abierto">🟢 Abierto Continuo (Siempre Abierto / Pruebas)</option>
+                            <option value="solo_noche">🌙 Solo Noche (6pm - 12am)</option>
+                            <option value="solo_manana">☀️ Solo Mañana (8am - 12pm)</option>
+                            <option value="cerrado">🔴 Cerrado (Todo el día)</option>
+                        </select>
+                    </div>
+
+                    <button type="button" class="admin-btn-primary" id="btn-guardar-horario">
+                        💾 Guardar Estado del Negocio
+                    </button>
+                    <div id="horario-mensaje"
+                        style="margin:6px 0 0; display:none; text-align:center; font-weight:bold;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 10px;">
+            <a href="carrito.html" class="admin-link-volver">← Ir al Menú / Carrito</a>
+        </div>
     </div>
 
     <script>
@@ -171,6 +377,21 @@
         const btnGuardarHorario = document.getElementById('btn-guardar-horario');
         const horarioMensaje = document.getElementById('horario-mensaje');
 
+        // ═══ TOGGLE MODULAR DE SECCIONES ═══
+        function toggleSeccionAdmin(panelId, btnId) {
+            const panel = document.getElementById(panelId);
+            const btn = document.getElementById(btnId);
+            if (!panel || !btn) return;
+            const abierto = panel.classList.contains('abierto');
+            if (abierto) {
+                panel.classList.remove('abierto');
+                btn.classList.remove('abierto');
+            } else {
+                panel.classList.add('abierto');
+                btn.classList.add('abierto');
+            }
+        }
+
         // ═══ LOGIN ═══
         const WORKER_URL = "https://login-worker.benjaminandresperaza.workers.dev";
 
@@ -179,13 +400,11 @@
             const contrasena = loginPass.value.trim();
             const originalButtonText = loginBtn.textContent;
 
-            // Limpiar mensajes previos y deshabilitar botón
             loginError.style.display = 'none';
             loginBtn.textContent = "Verificando...";
             loginBtn.disabled = true;
 
             try {
-                // Enviar la petición de forma segura al Worker de Cloudflare
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -194,24 +413,22 @@
 
                 const data = await response.json();
 
-                if (response.ok && data.success) { // Login exitoso desde el worker
-                    sessionStorage.setItem('adminUser', usuario); // Guardar usuario para otras operaciones
+                if (response.ok && data.success) {
+                    sessionStorage.setItem('adminUser', usuario);
                     loginError.style.display = 'none';
                     loginWrapper.style.display = 'none';
                     adminContent.style.display = 'block';
                     adminBody.classList.remove('login-page');
                     iniciarAdmin();
-                } else { // Error devuelto por el servidor (usuario o clave incorrecta)
+                } else {
                     loginError.textContent = '❌ ' + (data.error || "Acceso denegado");
                     loginError.style.display = 'block';
                 }
 
             } catch (error) {
-                // Error de conexión o de red
                 loginError.textContent = "❌ Error de conexión. No se pudo verificar.";
                 loginError.style.display = 'block';
             } finally {
-                // Restaurar botón
                 loginBtn.textContent = originalButtonText;
                 loginBtn.disabled = false;
             }
@@ -225,76 +442,227 @@
             if (e.key === 'Enter') { e.preventDefault(); loginPass.focus(); }
         });
 
-        btnGuardarHorario.addEventListener('click', guardarEstadoNegocio);
+        if (btnGuardarHorario) {
+            btnGuardarHorario.addEventListener('click', guardarEstadoNegocio);
+        }
 
         // ═══ MENÚ HAMBURGUESA ═══
         const hamburger = document.getElementById('hamburger-btn');
         const navMenu = document.getElementById('nav-menu');
-        hamburger.addEventListener('click', () => {
-            navMenu.classList.toggle('activo');
-        });
-        navMenu.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                navMenu.classList.remove('activo');
+        if (hamburger && navMenu) {
+            hamburger.addEventListener('click', () => {
+                navMenu.classList.toggle('activo');
             });
-        });
+            navMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    navMenu.classList.remove('activo');
+                });
+            });
+        }
 
         // ═══ REDES ═══
         const btnRedes = document.getElementById('btn-redes');
         const overlayRedes = document.getElementById('redes-overlay');
         const btnCerrarRedes = document.getElementById('redes-cerrar');
 
-        btnRedes.addEventListener('click', (e) => {
-            e.preventDefault();
-            overlayRedes.classList.add('activo');
-        });
-        btnCerrarRedes.addEventListener('click', () => {
-            overlayRedes.classList.remove('activo');
-        });
-        overlayRedes.addEventListener('click', (e) => {
-            if (e.target === overlayRedes) overlayRedes.classList.remove('activo');
-        });
+        if (btnRedes && overlayRedes) {
+            btnRedes.addEventListener('click', (e) => {
+                e.preventDefault();
+                overlayRedes.classList.add('activo');
+            });
+            if (btnCerrarRedes) {
+                btnCerrarRedes.addEventListener('click', () => {
+                    overlayRedes.classList.remove('activo');
+                });
+            }
+            overlayRedes.addEventListener('click', (e) => {
+                if (e.target === overlayRedes) overlayRedes.classList.remove('activo');
+            });
+        }
 
         // ═══ ADMIN LOGIC ═══
         let tasaBCV = null;
+        let modoTasa = 'auto'; // 'auto' | 'manual'
+        let tasaManual = null;
         const API = '/api/productos';
         const API_CATEGORIAS = '/api/categorias';
 
         // ─── Tasa ───
         async function obtenerTasa() {
             try {
-                const resp = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
-                const data = await resp.json();
-                const tasa = data.promedio ?? data.tasa ?? data.rate ??
-                             data.oficial?.precio ?? data.oficial?.promedio ?? null;
-                if (typeof tasa === 'number' && tasa > 0) {
-                    tasaBCV = tasa;
-                    document.getElementById('tasa-info').textContent = `✅ Tasa BCV: Bs ${tasaBCV.toFixed(2)}`;
+                const modoGuardado = localStorage.getItem('tasa_modo');
+                const valorGuardado = localStorage.getItem('tasa_manual');
+                if (modoGuardado) modoTasa = modoGuardado;
+                if (valorGuardado) tasaManual = parseFloat(valorGuardado);
+
+                try {
+                    const resModo = await fetch('/api/configuracion/tasa_modo');
+                    if (resModo.ok) {
+                        const dataModo = await resModo.json();
+                        if (dataModo.value) {
+                            modoTasa = dataModo.value;
+                            localStorage.setItem('tasa_modo', modoTasa);
+                        }
+                    }
+                    const resVal = await fetch('/api/configuracion/tasa_manual');
+                    if (resVal.ok) {
+                        const dataVal = await resVal.json();
+                        if (dataVal.value) {
+                            tasaManual = parseFloat(dataVal.value);
+                            localStorage.setItem('tasa_manual', dataVal.value);
+                        }
+                    }
+                } catch (e) { /* usar localStorage */ }
+            } catch (e) {
+                console.warn('Error leyendo tasa:', e);
+            }
+
+            sincronizarControlesTasaAdmin();
+            await aplicarTasaSegunModo();
+        }
+
+        function sincronizarControlesTasaAdmin() {
+            const radioAuto = document.getElementById('admin-tasa-auto');
+            const radioManual = document.getElementById('admin-tasa-manual');
+            const inputManual = document.getElementById('admin-input-tasa-manual');
+            if (modoTasa === 'manual') {
+                if (radioManual) radioManual.checked = true;
+            } else {
+                if (radioAuto) radioAuto.checked = true;
+            }
+            if (inputManual) {
+                if (tasaManual) {
+                    inputManual.value = tasaManual;
+                } else if (tasaBCV) {
+                    inputManual.value = tasaBCV.toFixed(2);
+                }
+            }
+            cambiarModoTasaAdminUI();
+        }
+
+        function cambiarModoTasaAdminUI() {
+            const esManual = document.getElementById('admin-tasa-manual')?.checked;
+            const seccion = document.getElementById('admin-seccion-tasa-manual');
+            if (seccion) {
+                if (esManual) {
+                    seccion.classList.remove('oculto');
+                    document.getElementById('admin-input-tasa-manual')?.focus();
+                } else {
+                    seccion.classList.add('oculto');
+                }
+            }
+        }
+
+        async function aplicarTasaSegunModo() {
+            const tasaInfo = document.getElementById('tasa-info');
+            const badgeResumen = document.getElementById('badge-tasa-resumen');
+
+            if (modoTasa === 'manual' && tasaManual && tasaManual > 0) {
+                tasaBCV = tasaManual;
+                if (tasaInfo) {
+                    tasaInfo.innerHTML = `✅ Tasa BCV: <strong>Bs ${tasaBCV.toFixed(2)}</strong> <span class="badge-tasa badge-manual">Manual</span>`;
+                }
+                if (badgeResumen) badgeResumen.textContent = `✏️ Manual (Bs ${tasaBCV.toFixed(2)})`;
+            } else {
+                modoTasa = 'auto';
+                if (tasaInfo) tasaInfo.textContent = 'Cargando tasa del día...';
+                let exito = false;
+                try {
+                    const resp = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+                    const data = await resp.json();
+                    const tasa = data.promedio ?? data.tasa ?? data.rate ??
+                        data.oficial?.precio ?? data.oficial?.promedio ?? null;
+                    if (typeof tasa === 'number' && tasa > 0) {
+                        tasaBCV = tasa;
+                        exito = true;
+                    }
+                } catch (e) { /* ignore */ }
+
+                if (!exito) {
+                    try {
+                        const resp = await fetch('https://api.bcv-api.xyz/v1/dolar');
+                        const data = await resp.json();
+                        const tasa = data?.dolar?.promedio ?? data?.promedio ?? data?.tasa ?? null;
+                        if (typeof tasa === 'number' && tasa > 0) {
+                            tasaBCV = tasa;
+                            exito = true;
+                        }
+                    } catch (e) { /* ignore */ }
+                }
+
+                if (exito && tasaInfo) {
+                    tasaInfo.innerHTML = `✅ Tasa BCV: <strong>Bs ${tasaBCV.toFixed(2)}</strong> <span class="badge-tasa badge-auto">Auto</span>`;
+                    if (badgeResumen) badgeResumen.textContent = `🤖 Auto (Bs ${tasaBCV.toFixed(2)})`;
+                } else if (tasaInfo) {
+                    if (!tasaBCV || tasaBCV <= 0) tasaBCV = 650.00;
+                    tasaInfo.innerHTML = `⚠️ Tasa estimada: <strong>Bs ${tasaBCV.toFixed(2)}</strong> <span class="badge-tasa badge-estimada">Estimada</span>`;
+                    if (badgeResumen) badgeResumen.textContent = `⚠️ Estimada (Bs ${tasaBCV.toFixed(2)})`;
+                }
+            }
+        }
+
+        async function guardarTasaAdmin() {
+            const esManual = document.getElementById('admin-tasa-manual')?.checked;
+
+            if (esManual) {
+                const val = parseFloat(document.getElementById('admin-input-tasa-manual')?.value);
+                if (!val || isNaN(val) || val <= 0) {
+                    mostrarMensajeTasa('❌ Ingresa una tasa válida mayor a 0', '#f44336');
                     return;
                 }
-            } catch (e) { /* ignore */ }
-            try {
-                const resp = await fetch('https://api.bcv-api.xyz/v1/dolar');
-                const data = await resp.json();
-                const tasa = data?.dolar?.promedio ?? data?.promedio ?? data?.tasa ?? null;
-                if (typeof tasa === 'number' && tasa > 0) {
-                    tasaBCV = tasa;
-                    document.getElementById('tasa-info').textContent = `✅ Tasa BCV (alternativa): Bs ${tasaBCV.toFixed(2)}`;
-                    return;
-                }
-            } catch (e) { /* ignore */ }
-            tasaBCV = 650.00;
-            document.getElementById('tasa-info').textContent = `⚠️ Tasa estimada: Bs ${tasaBCV.toFixed(2)} (recarga para actualizar)`;
+                modoTasa = 'manual';
+                tasaManual = val;
+                tasaBCV = val;
+                localStorage.setItem('tasa_modo', 'manual');
+                localStorage.setItem('tasa_manual', val.toString());
+
+                try {
+                    await fetch('/api/configuracion/tasa_modo', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ value: 'manual' })
+                    });
+                    await fetch('/api/configuracion/tasa_manual', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ value: val.toString() })
+                    });
+                } catch (e) { }
+            } else {
+                modoTasa = 'auto';
+                localStorage.setItem('tasa_modo', 'auto');
+                try {
+                    await fetch('/api/configuracion/tasa_modo', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ value: 'auto' })
+                    });
+                } catch (e) { }
+            }
+
+            await aplicarTasaSegunModo();
+            await cargarProductos();
+            mostrarMensajeTasa('✅ Tasa guardada correctamente');
+        }
+
+        function mostrarMensajeTasa(texto, color) {
+            const el = document.getElementById('admin-tasa-mensaje');
+            if (!el) return;
+            el.textContent = texto;
+            el.style.color = color || '#4caf50';
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 3500);
         }
 
         function formatearBs(usd) {
-            if (tasaBCV === null) return 'Bs -- (sin tasa)';
+            if (tasaBCV === null) return 'Bs --';
             if (typeof usd !== 'number' || isNaN(usd)) return 'Bs 0.00';
             return `Bs ${(usd * tasaBCV).toFixed(2)}`;
         }
 
         function mostrarError(msg) {
             const el = document.getElementById('mensaje-error');
+            if (!el) return;
             el.textContent = '❌ ' + msg;
             el.style.display = 'block';
             setTimeout(() => { el.style.display = 'none'; }, 5000);
@@ -302,6 +670,7 @@
 
         function mostrarMensajeCategoria(texto, color) {
             const el = document.getElementById('categoria-mensaje');
+            if (!el) return;
             el.textContent = texto;
             el.style.color = color || '#4caf50';
             el.style.display = 'block';
@@ -309,6 +678,7 @@
         }
 
         function mostrarMensajeHorario(texto, color) {
+            if (!horarioMensaje) return;
             horarioMensaje.textContent = texto;
             horarioMensaje.style.color = color || '#4caf50';
             horarioMensaje.style.display = 'block';
@@ -316,37 +686,224 @@
         }
 
         // ─── Categorías ───
+        let listaCategorias = [];
+
+        function mostrarFeedbackCategoria(texto, color) {
+            const fb = document.getElementById('categoria-feedback');
+            if (fb) {
+                fb.textContent = texto;
+                fb.style.color = color || '#4caf50';
+                fb.style.display = 'block';
+                setTimeout(() => { fb.style.display = 'none'; }, 4000);
+            }
+            mostrarMensajeCategoria(texto, color);
+        }
+
+        function abrirAgregarCategoria() {
+            const cont = document.getElementById('nueva-cat-contenedor');
+            const input = document.getElementById('categoria-nueva-input');
+            if (cont) {
+                cont.style.display = 'block';
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+            }
+        }
+
+        function cancelarNuevaCategoria() {
+            const cont = document.getElementById('nueva-cat-contenedor');
+            const input = document.getElementById('categoria-nueva-input');
+            if (cont) cont.style.display = 'none';
+            if (input) input.value = '';
+        }
+
+        async function confirmarGuardarNuevaCategoria() {
+            const input = document.getElementById('categoria-nueva-input');
+            const nombre = input ? input.value.trim() : '';
+            if (!nombre) {
+                mostrarFeedbackCategoria('⚠️ Ingresa un nombre para la nueva categoría', '#ff9800');
+                if (input) input.focus();
+                return;
+            }
+
+            try {
+                const res = await fetch(API_CATEGORIAS, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre })
+                });
+                const data = await res.json();
+                if (res.ok && data) {
+                    const nombreCreado = data.nombre || nombre;
+                    cancelarNuevaCategoria();
+                    mostrarFeedbackCategoria(`✅ Categoría "${nombreCreado}" creada`, '#4caf50');
+                    await cargarCategorias();
+                    const catSelect = document.getElementById('categoria-select');
+                    if (catSelect) {
+                        catSelect.value = nombreCreado;
+                    }
+                } else {
+                    mostrarFeedbackCategoria('❌ ' + (data.error || 'Error al crear categoría'), '#f88');
+                }
+            } catch (e) {
+                mostrarFeedbackCategoria('❌ Error de conexión al crear categoría', '#f88');
+            }
+        }
+
+        async function abrirEditarCategoriaSeleccionada() {
+            const catSelect = document.getElementById('categoria-select');
+            const catNombreActual = catSelect ? catSelect.value : '';
+            if (!catNombreActual) {
+                mostrarFeedbackCategoria('⚠️ Selecciona primero una categoría del menú para editarla', '#ff9800');
+                if (catSelect) catSelect.focus();
+                return;
+            }
+
+            const catObj = listaCategorias.find(c => c.nombre.toLowerCase() === catNombreActual.toLowerCase());
+            const catId = catObj ? catObj.id : null;
+
+            const nuevoNombre = prompt(`Editar nombre de la categoría "${catNombreActual}":`, catNombreActual);
+            if (nuevoNombre === null) return;
+            const nombreLimpio = nuevoNombre.trim();
+            if (!nombreLimpio) {
+                mostrarFeedbackCategoria('⚠️ El nombre no puede estar vacío', '#ff9800');
+                return;
+            }
+            if (nombreLimpio === catNombreActual) return;
+
+            try {
+                let url = catId ? `${API_CATEGORIAS}/${catId}` : null;
+                if (!url) {
+                    const resCats = await fetch(API_CATEGORIAS);
+                    const cats = await resCats.json();
+                    const encontrada = cats.find(c => c.nombre.toLowerCase() === catNombreActual.toLowerCase());
+                    if (encontrada) url = `${API_CATEGORIAS}/${encontrada.id}`;
+                }
+
+                if (!url) {
+                    mostrarFeedbackCategoria('❌ No se encontró la categoría', '#f88');
+                    return;
+                }
+
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre: nombreLimpio })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    mostrarFeedbackCategoria(`✅ Categoría actualizada a "${nombreLimpio}"`, '#4caf50');
+                    await cargarCategorias();
+                    await cargarProductos();
+                    if (catSelect) catSelect.value = nombreLimpio;
+                } else {
+                    mostrarFeedbackCategoria('❌ ' + (data.error || 'Error al actualizar'), '#f88');
+                }
+            } catch (e) {
+                mostrarFeedbackCategoria('❌ Error de conexión al editar categoría', '#f88');
+            }
+        }
+
+        async function eliminarCategoriaSeleccionada() {
+            const catSelect = document.getElementById('categoria-select');
+            const catNombreActual = catSelect ? catSelect.value : '';
+            if (!catNombreActual) {
+                mostrarFeedbackCategoria('⚠️ Selecciona primero una categoría del menú para eliminarla', '#ff9800');
+                if (catSelect) catSelect.focus();
+                return;
+            }
+
+            const catObj = listaCategorias.find(c => c.nombre.toLowerCase() === catNombreActual.toLowerCase());
+            const catId = catObj ? catObj.id : null;
+
+            if (!confirm(`¿Seguro que deseas eliminar la categoría "${catNombreActual}"?\nLos productos asociados no se borrarán, pero quedarán sin categoría.`)) {
+                return;
+            }
+
+            try {
+                let url = catId ? `${API_CATEGORIAS}/${catId}` : null;
+                if (!url) {
+                    const resCats = await fetch(API_CATEGORIAS);
+                    const cats = await resCats.json();
+                    const encontrada = cats.find(c => c.nombre.toLowerCase() === catNombreActual.toLowerCase());
+                    if (encontrada) url = `${API_CATEGORIAS}/${encontrada.id}`;
+                }
+
+                if (!url) {
+                    mostrarFeedbackCategoria('❌ No se encontró la categoría', '#f88');
+                    return;
+                }
+
+                const res = await fetch(url, { method: 'DELETE' });
+                if (res.ok) {
+                    mostrarFeedbackCategoria(`✅ Categoría "${catNombreActual}" eliminada`, '#4caf50');
+                    await cargarCategorias();
+                    await cargarProductos();
+                    if (catSelect) catSelect.value = '';
+                } else {
+                    mostrarFeedbackCategoria('❌ Error al eliminar categoría', '#f88');
+                }
+            } catch (e) {
+                mostrarFeedbackCategoria('❌ Error de conexión al eliminar categoría', '#f88');
+            }
+        }
+
         async function cargarCategorias() {
             try {
                 const res = await fetch(API_CATEGORIAS);
                 const categorias = await res.json();
-                const tbody = document.getElementById('categorias-body');
-                if (categorias.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">No hay categorías creadas</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = categorias.map((c, index) => `
-                    <tr>
-                        <td style="text-align:center;">${c.orden || index + 1}</td>
-                        <td>${c.nombre}</td>
-                        <td style="display:flex; gap:4px; flex-wrap:wrap; justify-content:center;">
-                            <button class="btn-mover" data-id="${c.id}" data-dir="up" title="Subir">▲</button>
-                            <button class="btn-mover" data-id="${c.id}" data-dir="down" title="Bajar">▼</button>
-                            <button class="btn-eliminar" onclick="eliminarCategoria(${c.id})">✕</button>
-                        </td>
-                    </tr>
-                `).join('');
+                listaCategorias = Array.isArray(categorias) ? categorias : [];
 
-                // Event listeners para mover
-                document.querySelectorAll('.btn-mover').forEach(btn => {
-                    btn.addEventListener('click', async function() {
-                        const id = this.dataset.id;
-                        const dir = this.dataset.dir;
-                        await moverCategoria(id, dir);
+                // Actualizar contador
+                const contCat = document.getElementById('contador-categorias');
+                if (contCat) contCat.textContent = listaCategorias.length;
+
+                // Actualizar desplegable de categorías en el formulario de productos
+                const catSelect = document.getElementById('categoria-select');
+                if (catSelect) {
+                    const valorActual = catSelect.value;
+                    let opcionesHtml = '<option value="">-- Seleccionar categoría --</option>';
+                    listaCategorias.forEach(c => {
+                        opcionesHtml += `<option value="${c.nombre}">${c.nombre}</option>`;
                     });
-                });
+                    catSelect.innerHTML = opcionesHtml;
+                    if (valorActual) {
+                        catSelect.value = valorActual;
+                    }
+                }
+
+                // Renderizar lista moderna en el panel de categorías
+                const listaContainer = document.getElementById('categorias-lista-container');
+                if (listaContainer) {
+                    if (listaCategorias.length === 0) {
+                        listaContainer.innerHTML = '<div style="text-align:center; color:#888; padding:12px;">No hay categorías creadas aún.</div>';
+                        return;
+                    }
+                    listaContainer.innerHTML = listaCategorias.map((c, index) => `
+                        <div class="categoria-card-item">
+                            <div class="categoria-item-left">
+                                <span class="categoria-num-badge">#${c.orden || index + 1}</span>
+                                <span class="categoria-nombre-text">${c.nombre}</span>
+                            </div>
+                            <div class="categoria-item-controles">
+                                <button type="button" class="btn-mover-cat" data-id="${c.id}" data-dir="up" title="Subir posición">▲ Subir</button>
+                                <button type="button" class="btn-mover-cat" data-id="${c.id}" data-dir="down" title="Bajar posición">▼ Bajar</button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    listaContainer.querySelectorAll('.btn-mover-cat').forEach(btn => {
+                        btn.addEventListener('click', async function () {
+                            const id = this.dataset.id;
+                            const dir = this.dataset.dir;
+                            await moverCategoria(id, dir);
+                        });
+                    });
+                }
             } catch (e) {
-                document.getElementById('categorias-body').innerHTML = '<tr><td colspan="3" style="color:#f88;">Error al cargar categorías</td></tr>';
+                const listaContainer = document.getElementById('categorias-lista-container');
+                if (listaContainer) listaContainer.innerHTML = '<div style="color:#f88; text-align:center;">Error al cargar categorías</div>';
             }
         }
 
@@ -360,7 +917,8 @@
                 const data = await res.json();
                 if (res.ok) {
                     mostrarMensajeCategoria('✅ Orden actualizado', '#4caf50');
-                    await cargarCategorias(); // recargar tabla
+                    await cargarCategorias();
+                    await cargarProductos();
                 } else {
                     mostrarMensajeCategoria('❌ ' + (data.error || 'Error'), '#f88');
                 }
@@ -369,32 +927,35 @@
             }
         }
 
-        async function eliminarCategoria(id) {
-            if (!confirm('¿Eliminar esta categoría? Los productos quedarán sin categoría.')) return;
-            try {
-                await fetch(`${API_CATEGORIAS}/${id}`, { method: 'DELETE' });
-                mostrarMensajeCategoria('✅ Categoría eliminada', '#4caf50');
-                await cargarCategorias();
-            } catch (e) {
-                mostrarMensajeCategoria('❌ Error al eliminar', '#f88');
-            }
+        // --- Estado del Negocio ---
+        function actualizarBadgeEstadoUI(valor) {
+            const badge = document.getElementById('badge-estado-resumen');
+            if (!badge) return;
+            const mapa = {
+                'normal': '🕒 Horario Completo',
+                'abierto': '🟢 Abierto Continuo',
+                'solo_noche': '🌙 Solo Noche',
+                'solo_manana': '☀️ Solo Mañana',
+                'cerrado': '🔴 Cerrado'
+            };
+            badge.textContent = mapa[valor] || '🟢 Abierto';
         }
 
-        // --- Estado del Negocio ---
         async function cargarEstadoNegocio() {
             try {
                 const res = await fetch('/api/configuracion/estado_negocio');
                 const data = await res.json();
                 if (data && data.value) {
-                    estadoNegocioSelect.value = data.value;
+                    if (estadoNegocioSelect) estadoNegocioSelect.value = data.value;
+                    actualizarBadgeEstadoUI(data.value);
                 }
             } catch (e) {
-                mostrarMensajeHorario('❌ Error al cargar el estado del negocio', '#f88');
+                mostrarMensajeHorario('❌ Error al cargar estado del negocio', '#f88');
             }
         }
 
         async function guardarEstadoNegocio() {
-            const nuevoEstado = estadoNegocioSelect.value;
+            const nuevoEstado = estadoNegocioSelect ? estadoNegocioSelect.value : 'normal';
             try {
                 const res = await fetch('/api/configuracion/estado_negocio', {
                     method: 'PUT',
@@ -402,48 +963,403 @@
                     body: JSON.stringify({ value: nuevoEstado })
                 });
                 const data = await res.json();
-                res.ok ? mostrarMensajeHorario('✅ Estado del negocio actualizado.', '#4caf50')
-                       : mostrarMensajeHorario('❌ ' + (data.error || 'Error al guardar'), '#f88');
+                if (res.ok) {
+                    mostrarMensajeHorario('✅ Estado del negocio actualizado', '#4caf50');
+                    actualizarBadgeEstadoUI(nuevoEstado);
+                } else {
+                    mostrarMensajeHorario('❌ ' + (data.error || 'Error al guardar'), '#f88');
+                }
             } catch (e) {
                 mostrarMensajeHorario('❌ Error de conexión al guardar', '#f88');
             }
         }
 
         // ─── Productos ───
+        let listaProductosGlobal = [];
+
+        function actualizarContadorAderezosCat(slug) {
+            const block = document.getElementById(`aderezo-block-${slug}`);
+            const badge = document.getElementById(`aderezo-badge-${slug}`);
+            if (!block || !badge) return;
+            const marcados = block.querySelectorAll('.cb-aderezo:checked').length;
+            if (marcados > 0) {
+                badge.textContent = `${marcados} selec.`;
+                badge.className = 'aderezo-cat-badge-count tiene-seleccionados';
+            } else {
+                badge.textContent = '0 selec.';
+                badge.className = 'aderezo-cat-badge-count';
+            }
+        }
+
+        function toggleAderezoCategoria(slug) {
+            const body = document.getElementById(`aderezo-body-${slug}`);
+            const arrow = document.getElementById(`aderezo-arrow-${slug}`);
+            if (!body) return;
+            const estaOculto = body.style.display === 'none';
+            if (estaOculto) {
+                body.style.display = 'block';
+                if (arrow) arrow.classList.add('rotado');
+            } else {
+                body.style.display = 'none';
+                if (arrow) arrow.classList.remove('rotado');
+            }
+        }
+
+        function toggleTodasCategoriasAderezos(expandir = true) {
+            const container = document.getElementById('aderezos-container');
+            if (!container) return;
+            const bodies = container.querySelectorAll('.aderezos-categoria-body');
+            const arrows = container.querySelectorAll('.aderezo-cat-arrow');
+            bodies.forEach(b => b.style.display = expandir ? 'block' : 'none');
+            arrows.forEach(a => {
+                if (expandir) a.classList.add('rotado');
+                else a.classList.remove('rotado');
+            });
+        }
+
+        function renderizarCheckboxesAderezos(seleccionados = [], productoActualId = null) {
+            const container = document.getElementById('aderezos-container');
+            if (!container) return;
+
+            if (!listaProductosGlobal || listaProductosGlobal.length === 0) {
+                container.innerHTML = '<span style="color:#888; font-size:0.8rem; padding:4px;">No hay otros productos creados aún.</span>';
+                return;
+            }
+
+            const seleccionadosIds = (seleccionados || []).map(s => typeof s === 'object' ? parseInt(s.id) : parseInt(s));
+            const disponibles = listaProductosGlobal.filter(p => !productoActualId || p.id != productoActualId);
+
+            if (disponibles.length === 0) {
+                container.innerHTML = '<span style="color:#888; font-size:0.8rem; padding:4px;">No hay otros productos disponibles para vincular.</span>';
+                return;
+            }
+
+            // Agrupar disponibles por categoría
+            const grupos = {};
+            const catOrdenadas = [];
+
+            // Priorizar categorías en listaCategorias
+            (listaCategorias || []).forEach(cat => {
+                grupos[cat.nombre] = [];
+                catOrdenadas.push(cat.nombre);
+            });
+
+            const nombreSinCat = 'Otras Opciones / Sin Categoría';
+            grupos[nombreSinCat] = [];
+
+            disponibles.forEach(p => {
+                const catNombre = p.categoria_nombre || nombreSinCat;
+                if (!grupos[catNombre]) {
+                    grupos[catNombre] = [];
+                    catOrdenadas.push(catNombre);
+                }
+                grupos[catNombre].push(p);
+            });
+
+            let htmlBloques = '';
+
+            catOrdenadas.forEach((catNombre, index) => {
+                const items = grupos[catNombre] || [];
+                if (items.length === 0) return;
+
+                const slug = 'cat-' + index;
+                const cantSeleccionados = items.filter(p => seleccionadosIds.includes(parseInt(p.id))).length;
+                const tieneSeleccionadosClass = cantSeleccionados > 0 ? 'tiene-seleccionados' : '';
+                // Abierto si tiene seleccionados o si es la primera categoría
+                const abierto = cantSeleccionados > 0 || index === 0;
+
+                htmlBloques += `
+                    <div class="aderezo-categoria-block" id="aderezo-block-${slug}">
+                        <div class="aderezo-categoria-header" onclick="toggleAderezoCategoria('${slug}')" role="button" tabindex="0" title="Clic para desplegar / ocultar categoría">
+                            <div class="aderezo-cat-title">
+                                <span class="aderezo-cat-icon">🏷️</span>
+                                <span>${catNombre}</span>
+                                <span class="aderezo-cat-disponibles">(${items.length})</span>
+                            </div>
+                            <div class="aderezo-cat-header-right">
+                                <span class="aderezo-cat-badge-count ${tieneSeleccionadosClass}" id="aderezo-badge-${slug}">
+                                    ${cantSeleccionados > 0 ? `${cantSeleccionados} selec.` : '0 selec.'}
+                                </span>
+                                <span class="aderezo-cat-arrow ${abierto ? 'rotado' : ''}" id="aderezo-arrow-${slug}">▼</span>
+                            </div>
+                        </div>
+                        <div class="aderezos-categoria-body" id="aderezo-body-${slug}" style="${abierto ? 'display:block;' : 'display:none;'}">
+                            <div class="aderezos-categoria-grid">
+                                ${items.map(p => {
+                    const checked = seleccionadosIds.includes(parseInt(p.id)) ? 'checked' : '';
+                    return `
+                                        <label class="aderezo-chip">
+                                            <input type="checkbox" class="cb-aderezo" value="${p.id}" data-nombre="${p.nombre.replace(/"/g, '&quot;')}" ${checked} onchange="actualizarContadorAderezosCat('${slug}')">
+                                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${p.nombre}">
+                                                ${p.nombre}
+                                            </span>
+                                        </label>
+                                    `;
+                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = htmlBloques || '<span style="color:#888; font-size:0.8rem; padding:4px;">No hay aderezos disponibles.</span>';
+        }
+
+        function generarFilasTablaProductos(prods) {
+            return prods.map(p => {
+                const tienePrecio = (p.precio_usd !== null && p.precio_usd !== undefined && p.precio_usd > 0);
+                const precioUsdHtml = tienePrecio ? `<strong>$${p.precio_usd.toFixed(2)}</strong>` : '<span style="color:#888;">—</span>';
+                const precioBsHtml = tienePrecio ? `<span class="precio-bs">${formatearBs(p.precio_usd)}</span>` : '<span style="color:#888;">—</span>';
+
+                let opcionesHtml = '<span style="color:#666;">—</span>';
+                if (p.opciones_incluidas && Array.isArray(p.opciones_incluidas) && p.opciones_incluidas.length > 0) {
+                    opcionesHtml = p.opciones_incluidas.map(o => `<span class="badge-opcion" style="background:#2c3e50; color:#ecf0f1; padding:2px 6px; border-radius:4px; font-size:0.75rem; display:inline-block; margin:1px;">${typeof o === 'object' ? o.nombre : o}</span>`).join(' ');
+                }
+
+                const entregaMap = {
+                    'delivery': '<span class="admin-badge-entrega">📦 Delivery</span>',
+                    'pickup': '<span class="admin-badge-entrega">🏪 Pickup</span>',
+                    'ambos': '<span class="admin-badge-entrega">✅ Ambos</span>'
+                };
+                const entregaHtml = entregaMap[p.tipo_entrega] || '<span class="admin-badge-entrega">✅ Ambos</span>';
+
+                return `
+                    <tr>
+                        <td>${p.imagen ? `<img class="admin-table-img" src="${p.imagen}" alt="${p.nombre}">` : '—'}</td>
+                        <td><strong>${p.nombre}</strong></td>
+                        <td>${precioUsdHtml}</td>
+                        <td>${precioBsHtml}</td>
+                        <td style="max-width:220px; font-size:0.8rem; color:#bbb;">${p.caracteristica}</td>
+                        <td>${opcionesHtml}</td>
+                        <td>${entregaHtml}</td>
+                        <td>
+                            <div class="admin-acciones-td">
+                                <button class="btn-editar" onclick="editarProducto(${p.id})">✏️ Editar</button>
+                                <button class="btn-eliminar" onclick="eliminarProducto(${p.id})">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleCategoriaProductos(cardId) {
+            const body = document.getElementById(`cat-body-${cardId}`);
+            const arrow = document.getElementById(`cat-arrow-${cardId}`);
+            const header = document.getElementById(`cat-header-${cardId}`);
+            if (!body) return;
+            const estaOculto = body.style.display === 'none';
+            if (estaOculto) {
+                body.style.display = 'block';
+                if (arrow) arrow.classList.add('rotado');
+                if (header) header.classList.add('abierto');
+            } else {
+                body.style.display = 'none';
+                if (arrow) arrow.classList.remove('rotado');
+                if (header) header.classList.remove('abierto');
+            }
+        }
+
+        function toggleTodasCategoriasProductos(expandir = true) {
+            const container = document.getElementById('productos-por-categoria-container');
+            if (!container) return;
+            const bodies = container.querySelectorAll('.admin-cat-group-body');
+            const arrows = container.querySelectorAll('.admin-cat-group-arrow');
+            const headers = container.querySelectorAll('.admin-cat-group-header');
+            bodies.forEach(b => b.style.display = expandir ? 'block' : 'none');
+            arrows.forEach(a => {
+                if (expandir) a.classList.add('rotado');
+                else a.classList.remove('rotado');
+            });
+            headers.forEach(h => {
+                if (expandir) h.classList.add('abierto');
+                else h.classList.remove('abierto');
+            });
+        }
+
         async function cargarProductos() {
             try {
                 const res = await fetch(API);
                 const productos = await res.json();
-                const tbody = document.getElementById('productos-body');
-                tbody.innerHTML = productos.map(p => `
-                    <tr>
-                        <td>${p.imagen ? `<img class="img-miniatura" src="${p.imagen}" alt="${p.nombre}">` : '—'}</td>
-                        <td>${p.nombre}</td>
-                        <td>$${p.precio_usd.toFixed(2)}</td>
-                        <td class="precio-bs">${formatearBs(p.precio_usd)}</td>
-                        <td>${p.caracteristica}</td>
-                        <td>${p.categoria_nombre || '—'}</td>
-                        <td>${p.tipo_entrega === 'delivery' ? '📦 Delivery' : p.tipo_entrega === 'pickup' ? '🏪 Pickup' : '✅ Ambos'}</td>
-                        <td>
-                            <button class="btn-editar" onclick="editarProducto(${p.id})">Editar</button>
-                            <button class="btn-eliminar" onclick="eliminarProducto(${p.id})">Eliminar</button>
-                        </td>
-                    </tr>
-                `).join('');
+                listaProductosGlobal = Array.isArray(productos) ? productos : [];
+
+                // Actualizar contador total
+                const contProd = document.getElementById('contador-productos');
+                if (contProd) contProd.textContent = listaProductosGlobal.length;
+
+                // Asegurar que tenemos la lista de categorías
+                if (!listaCategorias || listaCategorias.length === 0) {
+                    try {
+                        const resCats = await fetch(API_CATEGORIAS);
+                        const cats = await resCats.json();
+                        listaCategorias = Array.isArray(cats) ? cats : [];
+                    } catch (e) { }
+                }
+
+                renderizarCheckboxesAderezos();
+
+                const container = document.getElementById('productos-por-categoria-container');
+                if (!container) return;
+
+                if (listaProductosGlobal.length === 0) {
+                    container.innerHTML = `
+                        <div class="admin-empty-state" style="text-align:center; padding:24px; color:#888; background:#141414; border-radius:10px; border:1px dashed #333;">
+                            <div style="font-size:2rem; margin-bottom:8px;">📦</div>
+                            <strong>No hay productos registrados aún.</strong><br>
+                            <small>Utiliza el formulario de arriba para agregar tu primer producto.</small>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Barra de acciones para expandir / colapsar todas
+                let htmlGrupos = `
+                    <div class="admin-grupos-acciones-bar">
+                        <button type="button" class="btn-grupos-toggle" onclick="toggleTodasCategoriasProductos(true)" title="Abrir todas las categorías">
+                            🔽 Expandir todas
+                        </button>
+                        <button type="button" class="btn-grupos-toggle" onclick="toggleTodasCategoriasProductos(false)" title="Cerrar todas las categorías">
+                            🔼 Colapsar todas
+                        </button>
+                    </div>
+                `;
+
+                // Mapear productos por categoria_id o categoria_nombre
+                const productosPorCatId = {};
+                const productosSinCat = [];
+
+                listaProductosGlobal.forEach(p => {
+                    if (p.categoria_id) {
+                        if (!productosPorCatId[p.categoria_id]) productosPorCatId[p.categoria_id] = [];
+                        productosPorCatId[p.categoria_id].push(p);
+                    } else if (p.categoria_nombre) {
+                        const catObj = listaCategorias.find(c => c.nombre.toLowerCase() === p.categoria_nombre.toLowerCase());
+                        if (catObj) {
+                            if (!productosPorCatId[catObj.id]) productosPorCatId[catObj.id] = [];
+                            productosPorCatId[catObj.id].push(p);
+                        } else {
+                            productosSinCat.push(p);
+                        }
+                    } else {
+                        productosSinCat.push(p);
+                    }
+                });
+
+                // 1. Recorrer categorías en orden oficial
+                listaCategorias.forEach((cat, index) => {
+                    const prods = productosPorCatId[cat.id] || [];
+                    if (prods.length > 0) {
+                        const cardId = 'cat-prod-' + cat.id;
+                        htmlGrupos += `
+                            <div class="admin-cat-group-card">
+                                <div class="admin-cat-group-header abierto" id="cat-header-${cardId}" onclick="toggleCategoriaProductos('${cardId}')" role="button" tabindex="0" title="Clic para desplegar / ocultar esta categoría">
+                                    <div class="admin-cat-title-left">
+                                        <span class="categoria-num-badge">#${cat.orden || index + 1}</span>
+                                        <span class="admin-cat-group-name">${cat.nombre}</span>
+                                    </div>
+                                    <div class="admin-cat-header-right">
+                                        <span class="admin-cat-group-count">${prods.length} ${prods.length === 1 ? 'producto' : 'productos'}</span>
+                                        <span class="admin-cat-group-arrow rotado" id="cat-arrow-${cardId}">▼</span>
+                                    </div>
+                                </div>
+                                <div class="admin-cat-group-body" id="cat-body-${cardId}" style="display:block;">
+                                    <div class="admin-table-wrapper">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Img</th>
+                                                    <th>Nombre</th>
+                                                    <th>USD</th>
+                                                    <th>Bs</th>
+                                                    <th>Característica</th>
+                                                    <th>Productos vinculados</th>
+                                                    <th>Entrega</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${generarFilasTablaProductos(prods)}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                // 2. Productos sin categoría asignada
+                if (productosSinCat.length > 0) {
+                    const cardId = 'cat-prod-sincat';
+                    htmlGrupos += `
+                        <div class="admin-cat-group-card sin-categoria">
+                            <div class="admin-cat-group-header abierto" id="cat-header-${cardId}" onclick="toggleCategoriaProductos('${cardId}')" role="button" tabindex="0" title="Clic para desplegar / ocultar">
+                                <div class="admin-cat-title-left">
+                                    <span class="categoria-num-badge" style="background:#444;">—</span>
+                                    <span class="admin-cat-group-name">📦 Sin Categoría Asignada</span>
+                                </div>
+                                <div class="admin-cat-header-right">
+                                    <span class="admin-cat-group-count">${productosSinCat.length} ${productosSinCat.length === 1 ? 'producto' : 'productos'}</span>
+                                    <span class="admin-cat-group-arrow rotado" id="cat-arrow-${cardId}">▼</span>
+                                </div>
+                            </div>
+                            <div class="admin-cat-group-body" id="cat-body-${cardId}" style="display:block;">
+                                <div class="admin-table-wrapper">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Img</th>
+                                                <th>Nombre</th>
+                                                <th>USD</th>
+                                                <th>Bs</th>
+                                                <th>Característica</th>
+                                                <th>Productos vinculados</th>
+                                                <th>Entrega</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${generarFilasTablaProductos(productosSinCat)}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = htmlGrupos;
+
             } catch (error) {
-                document.getElementById('productos-body').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#f88;">Error al cargar productos</td></tr>';
+                const container = document.getElementById('productos-por-categoria-container');
+                if (container) container.innerHTML = '<div style="color:#f88; text-align:center; padding:16px;">Error al cargar productos</div>';
             }
         }
 
-        document.getElementById('producto-form').addEventListener('submit', async function(e) {
+        document.getElementById('producto-form')?.addEventListener('submit', async function (e) {
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
             const formData = new FormData();
             formData.append('nombre', document.getElementById('nombre').value.trim());
-            formData.append('precio_usd', document.getElementById('precio').value);
+            const precioVal = document.getElementById('precio').value.trim();
+            formData.append('precio_usd', precioVal !== '' ? precioVal : '0');
             formData.append('caracteristica', document.getElementById('caracteristica').value.trim());
-            const categoria = document.getElementById('categoria-input').value.trim();
+
+            let categoria = document.getElementById('categoria-select').value.trim();
+            const inputNueva = document.getElementById('categoria-nueva-input');
+            if (!categoria && inputNueva && inputNueva.value.trim()) {
+                categoria = inputNueva.value.trim();
+            }
             if (categoria) formData.append('categoria', categoria);
+
+            const aderezosSeleccionados = [];
+            document.querySelectorAll('.cb-aderezo:checked').forEach(cb => {
+                aderezosSeleccionados.push({
+                    id: parseInt(cb.value),
+                    nombre: cb.dataset.nombre
+                });
+            });
+            formData.append('opciones_incluidas', JSON.stringify(aderezosSeleccionados));
 
             const tipoEntregaRadios = document.querySelectorAll('input[name="tipo_entrega"]');
             let tipoEntrega = 'ambos';
@@ -463,12 +1379,24 @@
                 const data = await res.json();
                 if (res.ok) {
                     await cargarProductos();
-                    await cargarCategorias(); // actualizar lista de categorías también
+                    await cargarCategorias();
                     document.getElementById('producto-form').reset();
                     document.getElementById('edit-id').value = '';
-                    document.getElementById('preview-container').style.display = 'none';
-                    document.getElementById('file-name').textContent = 'Sin archivos seleccionados';
+                    document.getElementById('categoria-select').value = '';
+                    cancelarNuevaCategoria();
+                    renderizarCheckboxesAderezos();
+                    quitarImagenSeleccionada();
                     document.querySelector('input[name="tipo_entrega"][value="ambos"]').checked = true;
+
+                    const btnGuardar = document.getElementById('btn-guardar-producto');
+                    if (btnGuardar) {
+                        btnGuardar.textContent = '✅ ¡Guardado con éxito!';
+                        btnGuardar.style.background = '#27ae60';
+                        setTimeout(() => {
+                            btnGuardar.textContent = '💾 Guardar producto';
+                            btnGuardar.style.background = '';
+                        }, 2500);
+                    }
                 } else {
                     mostrarError(data.error || 'Error desconocido');
                 }
@@ -485,9 +1413,32 @@
                 if (p) {
                     document.getElementById('edit-id').value = p.id;
                     document.getElementById('nombre').value = p.nombre;
-                    document.getElementById('precio').value = p.precio_usd;
+                    document.getElementById('precio').value = (p.precio_usd && p.precio_usd > 0) ? p.precio_usd : '';
                     document.getElementById('caracteristica').value = p.caracteristica;
-                    document.getElementById('categoria-input').value = p.categoria_nombre || '';
+
+                    const catSelect = document.getElementById('categoria-select');
+                    cancelarNuevaCategoria();
+
+                    if (p.categoria_nombre) {
+                        let existe = false;
+                        for (let opt of catSelect.options) {
+                            if (opt.value === p.categoria_nombre) {
+                                existe = true;
+                                break;
+                            }
+                        }
+                        if (!existe) {
+                            const nuevaOpt = document.createElement('option');
+                            nuevaOpt.value = p.categoria_nombre;
+                            nuevaOpt.textContent = p.categoria_nombre;
+                            catSelect.appendChild(nuevaOpt);
+                        }
+                        catSelect.value = p.categoria_nombre;
+                    } else {
+                        catSelect.value = '';
+                    }
+
+                    renderizarCheckboxesAderezos(p.opciones_incluidas || [], p.id);
 
                     const tipo = p.tipo_entrega || 'ambos';
                     document.querySelectorAll('input[name="tipo_entrega"]').forEach(r => {
@@ -502,18 +1453,26 @@
                         previewImg.src = p.imagen;
                         previewContainer.style.display = 'block';
                         fileNameSpan.textContent = 'Imagen actual';
+                        fileNameSpan.classList.add('has-file');
                     } else {
                         previewContainer.style.display = 'none';
+                        previewImg.src = '';
                         fileNameSpan.textContent = 'Sin archivos seleccionados';
+                        fileNameSpan.classList.remove('has-file');
                     }
+
+                    const btnGuardar = document.getElementById('btn-guardar-producto');
+                    if (btnGuardar) btnGuardar.textContent = `💾 Actualizar "${p.nombre}"`;
+
+                    window.scrollTo({ top: document.getElementById('modulo-productos').offsetTop - 20, behavior: 'smooth' });
                 }
             } catch {
-                mostrarError('Error al cargar los productos');
+                mostrarError('Error al cargar datos del producto');
             }
         }
 
         async function eliminarProducto(id) {
-            if (!confirm('¿Eliminar este producto?')) return;
+            if (!confirm('¿Eliminar este producto permanentemente?')) return;
             try {
                 await fetch(`${API}/${id}`, { method: 'DELETE' });
                 await cargarProductos();
@@ -534,9 +1493,11 @@
                     event.target.value = '';
                     previewContainer.style.display = 'none';
                     fileNameSpan.textContent = 'Sin archivos seleccionados';
+                    fileNameSpan.classList.remove('has-file');
                     return;
                 }
                 fileNameSpan.textContent = file.name;
+                fileNameSpan.classList.add('has-file');
                 const reader = new FileReader();
                 reader.onload = e => {
                     previewImg.src = e.target.result;
@@ -544,19 +1505,34 @@
                 };
                 reader.readAsDataURL(file);
             } else {
-                previewContainer.style.display = 'none';
+                quitarImagenSeleccionada();
+            }
+        }
+
+        function quitarImagenSeleccionada() {
+            const fileInput = document.getElementById('imagen-file');
+            const previewContainer = document.getElementById('preview-container');
+            const previewImg = document.getElementById('preview-img');
+            const fileNameSpan = document.getElementById('file-name');
+
+            if (fileInput) fileInput.value = '';
+            if (previewImg) previewImg.src = '';
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (fileNameSpan) {
                 fileNameSpan.textContent = 'Sin archivos seleccionados';
+                fileNameSpan.classList.remove('has-file');
             }
         }
 
         // ─── Inicialización ───
         async function iniciarAdmin() {
             await obtenerTasa();
-            await cargarProductos();
             await cargarCategorias();
+            await cargarProductos();
             await cargarEstadoNegocio();
         }
 
     </script>
 </body>
+
 </html>
