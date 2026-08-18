@@ -166,7 +166,7 @@
             <div class="aderezo-modal-header">
                 <div class="aderezo-modal-title">
                     <span class="aderezo-icon"></span>
-                    <span id="aderezo-modal-prod-nombre">Elige tus aderezos</span>
+                    <span id="aderezo-modal-prod-nombre">Elige tus adicionales</span>
                 </div>
                 <button class="aderezo-modal-close" onclick="cerrarModalAderezos()">✕</button>
             </div>
@@ -174,7 +174,7 @@
                 <div class="aderezo-cantidad-box">
                     <div>
                         <span style="font-weight:700; font-size:0.95rem; color:#eee;">Cantidad de productos:</span>
-                        <div style="font-size:0.75rem; color:#aaa;">(1 aderezo incluido por cada unidad)</div>
+                        <div style="font-size:0.75rem; color:#aaa;">(adicional incluido por cada unidad)</div>
                     </div>
                     <div class="aderezo-cantidad-controles">
                         <button type="button" class="btn-qty-modal" onclick="cambiarCantidadModal(-1)">−</button>
@@ -185,8 +185,9 @@
 
                 <div id="aderezo-status-box" class="aderezo-distribucion-status completo"></div>
 
-                <p class="aderezo-modal-instruccion">Distribuye tus aderezos usando los botones <strong>+</strong> y
-                    <strong>−</strong> en cada salsa:</p>
+                <p class="aderezo-modal-instruccion">Distribuye tus adicionales usando los botones <strong>+</strong> y
+                    <strong>−</strong> en cada producto:
+                </p>
                 <div id="aderezo-opciones-list" class="aderezo-opciones-grid"></div>
             </div>
             <div class="aderezo-modal-footer">
@@ -477,19 +478,21 @@
                 html += `<div class="categoria-header"><span>${cat}</span></div>`;
                 html += `<div class="productos-grid-carrito">`;
                 items.forEach(p => {
-                    const tienePrecio = (p.precio_usd !== null && p.precio_usd !== undefined && p.precio_usd > 0);
-                    const precioUsdHtml = tienePrecio ? `$${p.precio_usd.toFixed(2)}` : '';
-                    const precioBsHtml = tienePrecio ? formatearBs(p.precio_usd) : '';
+                    const precioNum = Number(p.precio_usd);
+                    const tienePrecio = (p.precio_usd !== null && p.precio_usd !== undefined && !isNaN(precioNum) && precioNum > 0);
+                    const precioUsdHtml = tienePrecio ? `$${precioNum.toFixed(2)}` : '';
+                    const precioBsHtml = tienePrecio ? formatearBs(precioNum) : '';
+                    const botonAgregarHtml = tienePrecio ? `<button class="btn-agregar" onclick="agregarAlCarrito(${p.id})">Agregar</button>` : '';
 
                     html += `
-                        <div class="producto-card-carrito">
+                        <div class="producto-card-carrito ${!tienePrecio ? 'sin-precio' : ''}">
                             ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}">` : '<div style="height:110px; background:#333; display:flex; align-items:center; justify-content:center; color:#888;">Sin foto</div>'}
                             <div class="producto-body">
                                 <div class="producto-nombre">${p.nombre}</div>
-                                <div class="producto-desc">${p.caracteristica}</div>
+                                <div class="producto-desc">${p.caracteristica || ''}</div>
                                 ${precioUsdHtml ? `<div class="precio-usd">${precioUsdHtml}</div>` : ''}
                                 ${precioBsHtml ? `<div class="precio-bs">${precioBsHtml}</div>` : ''}
-                                <button class="btn-agregar" onclick="agregarAlCarrito(${p.id})">Agregar</button>
+                                ${botonAgregarHtml}
                             </div>
                         </div>
                     `;
@@ -757,6 +760,23 @@
             document.getElementById('aderezo-modal-overlay').classList.add('activo');
         }
 
+        function buscarProductoOpcion(opt) {
+            if (!opt) return null;
+            const optObj = typeof opt === 'object' ? opt : { id: opt, nombre: opt };
+            // 1. Buscar PRIMERO por ID exacto si tiene ID numérico/definido
+            if (optObj.id !== undefined && optObj.id !== null && optObj.id !== '') {
+                const prodPorId = productosOriginales.find(p => p.id == optObj.id);
+                if (prodPorId) return prodPorId;
+            }
+            // 2. Si no se encontró por ID, buscar por nombre exacto como fallback
+            if (optObj.nombre) {
+                const nombreBuscado = String(optObj.nombre).toLowerCase().trim();
+                const prodPorNombre = productosOriginales.find(p => p.nombre && p.nombre.toLowerCase().trim() === nombreBuscado);
+                if (prodPorNombre) return prodPorNombre;
+            }
+            return null;
+        }
+
         function renderizarTarjetasAderezosModal() {
             if (!productoModalActual) return;
             const opciones = productoModalActual.opciones_incluidas || [];
@@ -769,18 +789,20 @@
                 const count = distribucionAderezos[idx] || 0;
                 const isSelected = count > 0;
 
-                // Buscar datos completos del producto en el catálogo original
-                const optProd = productosOriginales.find(p => p.id == optObj.id || (p.nombre && optObj.nombre && p.nombre.toLowerCase().trim() === optObj.nombre.toLowerCase().trim()));
+                // Buscar datos completos del producto en el catálogo original por ID exacto
+                const optProd = buscarProductoOpcion(optObj);
 
                 const optNombre = optProd ? optProd.nombre : optObj.nombre;
                 const optDesc = optProd && optProd.caracteristica ? optProd.caracteristica : '';
-                const optImg = optProd && optProd.imagen ? optProd.imagen : null;
+                let optImg = optProd && optProd.imagen ? optProd.imagen : null;
+                if (optImg && !optImg.startsWith('http') && !optImg.startsWith('/')) {
+                    optImg = '/' + optImg;
+                }
 
                 const imgHtml = optImg
                     ? `<img src="${optImg}" alt="${optNombre}">`
                     : `<div style="height:110px; background:#2a2a2a; display:flex; align-items:center; justify-content:center; color:#888; font-size:0.8rem;">Sin foto</div>`;
 
-                const canIncrease = totalSeleccionado < cantidadModalActual;
                 const canDecrease = count > 0;
 
                 return `
@@ -793,7 +815,7 @@
                             <div class="aderezo-card-stepper-box" onclick="event.stopPropagation()">
                                 <button type="button" class="btn-qty-card-mini" onclick="cambiarQtyAderezo(${idx}, -1)" ${!canDecrease ? 'disabled' : ''}>−</button>
                                 <span class="aderezo-card-qty-num" id="qty-num-${idx}">${count}</span>
-                                <button type="button" class="btn-qty-card-mini" onclick="cambiarQtyAderezo(${idx}, 1)" ${!canIncrease ? 'disabled' : ''}>+</button>
+                                <button type="button" class="btn-qty-card-mini" onclick="cambiarQtyAderezo(${idx}, 1)">+</button>
                             </div>
                         </div>
                     </div>
@@ -803,11 +825,12 @@
 
         function tocarTarjetaAderezo(idx) {
             if (!productoModalActual) return;
+            const opciones = productoModalActual.opciones_incluidas || [];
             const totalSeleccionado = Object.values(distribucionAderezos).reduce((s, v) => s + v, 0);
+            const actual = distribucionAderezos[idx] || 0;
 
-            // Si la cantidad total de productos es 1, cambiar la selección completa a esta opción
+            // Si la cantidad total de productos es 1, cambiar la selección completa directamente a esta opción
             if (cantidadModalActual === 1) {
-                const opciones = productoModalActual.opciones_incluidas || [];
                 opciones.forEach((_, i) => distribucionAderezos[i] = 0);
                 distribucionAderezos[idx] = 1;
                 renderizarTarjetasAderezosModal();
@@ -818,13 +841,12 @@
             // Si aún hay espacio disponible para sumar, sumar a esta tarjeta
             if (totalSeleccionado < cantidadModalActual) {
                 cambiarQtyAderezo(idx, 1);
-            } else if ((distribucionAderezos[idx] || 0) === 0) {
+            } else if (actual === 0) {
                 // Si ya está lleno pero el usuario toca una salsa con 0, reasignar 1 de otra salsa
-                const opciones = productoModalActual.opciones_incluidas || [];
                 for (let i = 0; i < opciones.length; i++) {
                     if (i !== idx && (distribucionAderezos[i] || 0) > 0) {
                         distribucionAderezos[i]--;
-                        distribucionAderezos[idx] = (distribucionAderezos[idx] || 0) + 1;
+                        distribucionAderezos[idx] = 1;
                         break;
                     }
                 }
@@ -835,15 +857,31 @@
 
         function cambiarQtyAderezo(idx, delta) {
             if (!productoModalActual) return;
+            const opciones = productoModalActual.opciones_incluidas || [];
             const totalSeleccionado = Object.values(distribucionAderezos).reduce((s, v) => s + v, 0);
             const actual = distribucionAderezos[idx] || 0;
 
             if (delta > 0) {
-                if (totalSeleccionado >= cantidadModalActual) return;
-                distribucionAderezos[idx] = actual + 1;
+                if (totalSeleccionado < cantidadModalActual) {
+                    distribucionAderezos[idx] = actual + 1;
+                } else if (cantidadModalActual === 1) {
+                    // Si la cantidad total es 1, cambiar la selección a esta tarjeta
+                    opciones.forEach((_, i) => distribucionAderezos[i] = 0);
+                    distribucionAderezos[idx] = 1;
+                } else {
+                    // Si la cantidad es > 1 y ya está lleno, reasignar 1 unidad desde otra opción
+                    for (let i = 0; i < opciones.length; i++) {
+                        if (i !== idx && (distribucionAderezos[i] || 0) > 0) {
+                            distribucionAderezos[i]--;
+                            distribucionAderezos[idx] = actual + 1;
+                            break;
+                        }
+                    }
+                }
             } else if (delta < 0) {
-                if (actual <= 0) return;
-                distribucionAderezos[idx] = actual - 1;
+                if (actual > 0) {
+                    distribucionAderezos[idx] = actual - 1;
+                }
             }
 
             renderizarTarjetasAderezosModal();
@@ -911,7 +949,7 @@
 
             if (faltantes === 0) {
                 statusBox.className = 'aderezo-distribucion-status completo';
-                statusBox.innerHTML = `✅ ¡<strong>${totalSeleccionado} de ${cantidadModalActual}</strong> aderezos listos! ${resumenSalsas.length > 0 ? `(${resumenSalsas.join(', ')})` : ''}`;
+                statusBox.innerHTML = `✅ ¡<strong>${totalSeleccionado} de ${cantidadModalActual}</strong> adicionales listos! ${resumenSalsas.length > 0 ? `(${resumenSalsas.join(', ')})` : ''}`;
             } else {
                 statusBox.className = 'aderezo-distribucion-status incompleto';
                 statusBox.innerHTML = `⚠️ Has seleccionado <strong>${totalSeleccionado} de ${cantidadModalActual}</strong> aderezos. Te faltan <strong>${faltantes}</strong> por asignar.`;
@@ -944,7 +982,7 @@
                 const qty = distribucionAderezos[idx] || 0;
                 if (qty > 0) {
                     const optObj = typeof opt === 'object' ? opt : { id: idx, nombre: opt };
-                    const optProd = productosOriginales.find(p => p.id == optObj.id || (p.nombre && optObj.nombre && p.nombre.toLowerCase().trim() === optObj.nombre.toLowerCase().trim()));
+                    const optProd = buscarProductoOpcion(optObj);
                     const nombreFinal = optProd ? optProd.nombre : optObj.nombre;
                     aderezosElegidos.push({
                         id: optObj.id,
@@ -999,8 +1037,15 @@
                 }
             }
 
+            // Si el producto no tiene precio y no tiene opciones vinculadas, no se puede agregar directamente
+            const precioNum = Number(producto.precio_usd);
+            const tieneOpciones = producto.opciones_incluidas && Array.isArray(producto.opciones_incluidas) && producto.opciones_incluidas.length > 0;
+            if ((!precioNum || precioNum <= 0) && !tieneOpciones) {
+                return;
+            }
+
             // Si tiene aderezos/opciones vinculadas, abrir modal de selección
-            if (producto.opciones_incluidas && Array.isArray(producto.opciones_incluidas) && producto.opciones_incluidas.length > 0) {
+            if (tieneOpciones) {
                 abrirModalAderezos(producto);
                 return;
             }
@@ -1105,7 +1150,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                             <div style="display:flex; flex-direction:column; gap:2px;">
                                 <span class="carrito-item-nombre">${item.nombre}</span>
-                                ${item.opcion_seleccionada ? `<span class="carrito-item-opcion"> Aderezos: <strong>${item.opcion_seleccionada}</strong></span>` : ''}
+                                ${item.opcion_seleccionada ? `<span class="carrito-item-opcion">Modalidad de entrega disponible: Aderezos: <strong>${item.opcion_seleccionada}</strong></span>` : ''}
                             </div>
                             <button onclick="eliminarItem('${itemKey}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:1.1rem; padding:0 4px;" title="Eliminar">🗑️</button>
                         </div>
