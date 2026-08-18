@@ -173,7 +173,7 @@
             <div class="aderezo-modal-body">
                 <div class="aderezo-cantidad-box">
                     <div>
-                        <span style="font-weight:700; font-size:0.95rem; color:#eee;">Cantidad de productos:</span>
+                        <span style="font-weight:700; font-size:0.95rem; color:#eee;">ingresa la cantidad</span>
                         <div style="font-size:0.75rem; color:#aaa;">(adicional incluido por cada unidad)</div>
                     </div>
                     <div class="aderezo-cantidad-controles">
@@ -755,6 +755,9 @@
             const opciones = producto.opciones_incluidas || [];
             if (!opciones || opciones.length === 0) return;
 
+            const container = document.getElementById('aderezo-opciones-list');
+            if (container) container.innerHTML = '';
+
             // Inicializar: por defecto 1 unidad en la primera opción
             distribucionAderezos[0] = 1;
             for (let i = 1; i < opciones.length; i++) {
@@ -791,46 +794,77 @@
             if (!productoModalActual) return;
             const opciones = productoModalActual.opciones_incluidas || [];
             const container = document.getElementById('aderezo-opciones-list');
+            if (!container) return;
 
-            const totalSeleccionado = Object.values(distribucionAderezos).reduce((s, v) => s + v, 0);
+            const existingCards = container.querySelectorAll('.aderezo-card-selectable');
+            if (existingCards.length !== opciones.length) {
+                container.innerHTML = opciones.map((opt, idx) => {
+                    const optObj = typeof opt === 'object' ? opt : { id: idx, nombre: opt };
+                    const optProd = buscarProductoOpcion(optObj);
 
-            container.innerHTML = opciones.map((opt, idx) => {
-                const optObj = typeof opt === 'object' ? opt : { id: idx, nombre: opt };
-                const count = distribucionAderezos[idx] || 0;
-                const isSelected = count > 0;
+                    const optNombre = optProd ? optProd.nombre : optObj.nombre;
+                    const optDesc = optProd && optProd.caracteristica ? optProd.caracteristica : '';
+                    let optImg = optProd && optProd.imagen ? optProd.imagen : null;
+                    if (optImg && !optImg.startsWith('http') && !optImg.startsWith('/')) {
+                        optImg = '/' + optImg;
+                    }
 
-                // Buscar datos completos del producto en el catálogo original por ID exacto
-                const optProd = buscarProductoOpcion(optObj);
+                    const imgHtml = optImg
+                        ? `<img src="${optImg}" alt="${optNombre}">`
+                        : `<div class="aderezo-img-placeholder">Sin foto</div>`;
 
-                const optNombre = optProd ? optProd.nombre : optObj.nombre;
-                const optDesc = optProd && optProd.caracteristica ? optProd.caracteristica : '';
-                let optImg = optProd && optProd.imagen ? optProd.imagen : null;
-                if (optImg && !optImg.startsWith('http') && !optImg.startsWith('/')) {
-                    optImg = '/' + optImg;
-                }
-
-                const imgHtml = optImg
-                    ? `<img src="${optImg}" alt="${optNombre}">`
-                    : `<div class="aderezo-img-placeholder">Sin foto</div>`;
-
-                const canDecrease = count > 0;
-
-                return `
-                    <div class="producto-card-carrito aderezo-card-selectable ${isSelected ? 'seleccionada' : ''}" id="aderezo-card-${idx}" onclick="tocarTarjetaAderezo(${idx})" style="--anim-delay: ${(idx * 0.04).toFixed(2)}s;">
-                        ${count > 0 ? `<div class="aderezo-badge-count">x${count}</div>` : ''}
-                        ${imgHtml}
-                        <div class="producto-body">
-                            <div class="producto-nombre">${optNombre}</div>
-                            ${optDesc ? `<div class="producto-desc">${optDesc}</div>` : ''}
-                            <div class="aderezo-card-stepper-box" onclick="event.stopPropagation()">
-                                <button type="button" class="btn-qty-card-mini" onclick="cambiarQtyAderezo(${idx}, -1)" ${!canDecrease ? 'disabled' : ''}>−</button>
-                                <span class="aderezo-card-qty-num" id="qty-num-${idx}">${count}</span>
-                                <button type="button" class="btn-qty-card-mini" onclick="cambiarQtyAderezo(${idx}, 1)">+</button>
+                    return `
+                        <div class="aderezo-card-selectable" id="aderezo-card-${idx}" onclick="tocarTarjetaAderezo(${idx})">
+                            <div class="aderezo-badge-count" id="aderezo-badge-${idx}" style="display: none;"></div>
+                            ${imgHtml}
+                            <div class="producto-body">
+                                <div class="producto-nombre">${optNombre}</div>
+                                ${optDesc ? `<div class="producto-desc">${optDesc}</div>` : ''}
+                                <div class="aderezo-card-stepper-box" onclick="event.stopPropagation()">
+                                    <button type="button" class="btn-qty-card-mini" id="btn-minus-${idx}" onclick="cambiarQtyAderezo(${idx}, -1)" disabled>−</button>
+                                    <span class="aderezo-card-qty-num" id="qty-num-${idx}">0</span>
+                                    <button type="button" class="btn-qty-card-mini" id="btn-plus-${idx}" onclick="cambiarQtyAderezo(${idx}, 1)">+</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
+
+            // Actualizar visualmente cada tarjeta de forma estática e instantánea
+            opciones.forEach((_, idx) => {
+                const count = distribucionAderezos[idx] || 0;
+                const isSelected = count > 0;
+                const card = document.getElementById(`aderezo-card-${idx}`);
+                const badge = document.getElementById(`aderezo-badge-${idx}`);
+                const qtyNum = document.getElementById(`qty-num-${idx}`);
+                const btnMinus = document.getElementById(`btn-minus-${idx}`);
+
+                if (card) {
+                    if (isSelected) {
+                        card.classList.add('seleccionada');
+                    } else {
+                        card.classList.remove('seleccionada');
+                    }
+                }
+
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = `x${count}`;
+                        badge.style.display = 'block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+
+                if (qtyNum) {
+                    qtyNum.textContent = count;
+                }
+
+                if (btnMinus) {
+                    btnMinus.disabled = count <= 0;
+                }
+            });
         }
 
         function tocarTarjetaAderezo(idx) {
@@ -1160,7 +1194,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                             <div style="display:flex; flex-direction:column; gap:2px;">
                                 <span class="carrito-item-nombre">${item.nombre}</span>
-                                ${item.opcion_seleccionada ? `<span class="carrito-item-opcion">Modalidad de entrega disponible: Aderezos: <strong>${item.opcion_seleccionada}</strong></span>` : ''}
+                                ${item.opcion_seleccionada ? `<span class="carrito-item-opcion">adicionales :<strong>${item.opcion_seleccionada}</strong></span>` : ''}
                             </div>
                             <button onclick="eliminarItem('${itemKey}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:1.1rem; padding:0 4px;" title="Eliminar">🗑️</button>
                         </div>
@@ -1277,10 +1311,10 @@
 
             const direccion = document.getElementById('cliente-direccion').value.trim();
 
-            let mensaje = '📝 Pedido\n';
-            mensaje += '🛒 Productos:\n';
+            let mensaje = 'PEDIDO\n';
+            mensaje += 'PRODUCTOS:\n';
 
-            // Lista de productos
+            // Lista de producto
             carrito.forEach(item => {
                 const tienePrecio = item.precio_usd && item.precio_usd > 0;
                 let subtotalText = '';
@@ -1295,12 +1329,12 @@
 
                 mensaje += `• ${item.nombre}: x${item.cantidad}${subtotalText}\n`;
                 if (item.opcion_seleccionada) {
-                    mensaje += `   ↳ Aderezos: ${item.opcion_seleccionada}\n`;
+                    mensaje += `   ↳ ADICIONALES: ${item.opcion_seleccionada}\n`;
                 }
             });
             mensaje += '\n';
 
-            mensaje += '💰 Pago:\n\n';
+            mensaje += 'PAGO:\n\n';
 
             const subtotal = carrito.reduce((s, i) => s + i.precio_usd * i.cantidad, 0);
 
@@ -1309,14 +1343,14 @@
             if (tasaBCV) {
                 subtotalBS = formatearBs(subtotal).replace('Bs ', '');
             }
-            mensaje += `Subtotal: \n$${subtotal.toFixed(2)} (${subtotalBS} Bs)\n`;
+            mensaje += `SUBTOTAL: \n$${subtotal.toFixed(2)} (${subtotalBS} Bs)\n`;
 
-            if (tipoEntrega === 'delivery' && costoEnvio > 0) {
+            if (tipoEntrega === 'DELIVERY' && costoEnvio > 0) {
                 let costoEnvioBS = '';
                 if (tasaBCV) {
                     costoEnvioBS = formatearBs(costoEnvio).replace('Bs ', '');
                 }
-                mensaje += `Delivery (Estimado): \n$${costoEnvio.toFixed(2)} (${costoEnvioBS} Bs)\n`;
+                mensaje += `DELIVERY (Estimado): \n$${costoEnvio.toFixed(2)} (${costoEnvioBS} Bs)\n`;
             }
             mensaje += '\n';
 
@@ -1329,19 +1363,19 @@
             mensaje += `TOTAL APROXIMADO: \n$${totalFinal.toFixed(2)} (${totalFinalBS} Bs)\n\n`;
 
             // Datos del cliente y entrega
-            mensaje += '👤 Información del Cliente:\n\n';
-            if (nombre || apellido) mensaje += `Nombre: ${nombre} ${apellido}`.trim() + '\n';
-            if (telefono) mensaje += `Teléfono: ${telefono}\n`;
-            if (pago) mensaje += `Método de Pago: ${pago}\n`;
-            mensaje += `Tipo de Entrega: ${tipoEntrega === 'pickup' ? 'Pickup' : 'Delivery'}\n\n`;
+            mensaje += '👤 INFORMACION DEL CLIENTE\n\n';
+            if (nombre || apellido) mensaje += `NOMBRE: ${nombre} ${apellido}`.trim() + '\n';
+            if (telefono) mensaje += `TELEFONO: ${telefono}\n`;
+            if (pago) mensaje += `METODO DE PAGO: ${pago}\n`;
+            mensaje += `TIPO DE ENTREGA: ${tipoEntrega === 'pickup' ? 'Pickup' : 'Delivery'}\n\n`;
 
             if (tipoEntrega === 'delivery') {
-                mensaje += '📍 Información de Envío:\n\n';
+                mensaje += 'INFORMACION DEL ENVIO:\n\n';
                 if (direccion) mensaje += `Referencia: ${direccion}\n`;
-                mensaje += `Distancia (estimada): ${distanciaKm.toFixed(2)} km\n`;
+                mensaje += `DISTANCIA (estimada): ${distanciaKm.toFixed(2)} km\n`;
                 if (clienteLat && clienteLon) {
                     const googleMapsClientUrl = `https://maps.google.com/?q=${clienteLat},${clienteLon}`;
-                    mensaje += `Ubicación del Cliente (Mapa): ${googleMapsClientUrl}\n`;
+                    mensaje += `UBICAICON DEL CLIENTE (MAPA): ${googleMapsClientUrl}\n`;
                 }
             }
 
