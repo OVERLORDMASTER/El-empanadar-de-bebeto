@@ -455,7 +455,7 @@
             }) : productos; // si no hay filtro, mostrar todos
 
             if (productosFiltrados.length === 0) {
-                contenedor.innerHTML = `<p style="text-align:center; color:#888; padding:20px;">No hay productos disponibles para ${tipoEntrega === 'pickup' ? 'Pickup' : 'Delivery'}.<br>Seleccioná otro método o agregá productos.</p>`;
+                contenedor.innerHTML = `<div class="productos-vacio-msg">No hay productos disponibles para <strong>${tipoEntrega === 'pickup' ? 'Pickup' : 'Delivery'}</strong>.<br><small style="color:#888;">Seleccioná otro método o prueba con otra búsqueda.</small></div>`;
                 return;
             }
 
@@ -472,9 +472,15 @@
             });
 
             let html = '';
+            let itemGlobalIndex = 0;
+            let catIndex = 0;
+
             for (const cat of categoriasEnOrden) {
                 const items = grupos[cat];
-                html += `<div class="categoria-grupo">`;
+                const catDelay = (catIndex * 0.05).toFixed(2);
+                catIndex++;
+
+                html += `<div class="categoria-grupo" style="--cat-delay: ${catDelay}s;">`;
                 html += `<div class="categoria-header"><span>${cat}</span></div>`;
                 html += `<div class="productos-grid-carrito">`;
                 items.forEach(p => {
@@ -484,9 +490,13 @@
                     const precioBsHtml = tienePrecio ? formatearBs(precioNum) : '';
                     const botonAgregarHtml = tienePrecio ? `<button class="btn-agregar" onclick="agregarAlCarrito(${p.id})">Agregar</button>` : '';
 
+                    // Retardo escalonado suave (máximo 0.40s para respuesta instantánea y fluida)
+                    const itemDelay = Math.min(itemGlobalIndex * 0.035, 0.40).toFixed(3);
+                    itemGlobalIndex++;
+
                     html += `
-                        <div class="producto-card-carrito ${!tienePrecio ? 'sin-precio' : ''}">
-                            ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}">` : '<div style="height:110px; background:#333; display:flex; align-items:center; justify-content:center; color:#888;">Sin foto</div>'}
+                        <div class="producto-card-carrito ${!tienePrecio ? 'sin-precio' : ''}" style="--anim-delay: ${itemDelay}s;">
+                            ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}" loading="lazy">` : '<div style="height:110px; background:#333; display:flex; align-items:center; justify-content:center; color:#888;">Sin foto</div>'}
                             <div class="producto-body">
                                 <div class="producto-nombre">${p.nombre}</div>
                                 <div class="producto-desc">${p.caracteristica || ''}</div>
@@ -801,12 +811,12 @@
 
                 const imgHtml = optImg
                     ? `<img src="${optImg}" alt="${optNombre}">`
-                    : `<div style="height:110px; background:#2a2a2a; display:flex; align-items:center; justify-content:center; color:#888; font-size:0.8rem;">Sin foto</div>`;
+                    : `<div class="aderezo-img-placeholder">Sin foto</div>`;
 
                 const canDecrease = count > 0;
 
                 return `
-                    <div class="producto-card-carrito aderezo-card-selectable ${isSelected ? 'seleccionada' : ''}" id="aderezo-card-${idx}" onclick="tocarTarjetaAderezo(${idx})">
+                    <div class="producto-card-carrito aderezo-card-selectable ${isSelected ? 'seleccionada' : ''}" id="aderezo-card-${idx}" onclick="tocarTarjetaAderezo(${idx})" style="--anim-delay: ${(idx * 0.04).toFixed(2)}s;">
                         ${count > 0 ? `<div class="aderezo-badge-count">x${count}</div>` : ''}
                         ${imgHtml}
                         <div class="producto-body">

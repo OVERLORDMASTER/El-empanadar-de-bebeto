@@ -84,21 +84,21 @@
         <section class="seccion productos-destacados" id="productos">
             <h2 class="seccion-titulo">Nuestros tamaños</h2>
             <div class="productos-grid">
-                <div class="producto-card">
+                <div class="producto-card" style="--anim-delay: 0.05s;">
                     <img src="/imagen/1.jpg" alt="Empanada de carne">
                     <div class="producto-info">
                         <h3>pequeña</h3>
                         <p>11 cm</p>
                     </div>
                 </div>
-                <div class="producto-card">
+                <div class="producto-card" style="--anim-delay: 0.15s;">
                     <img src="/imagen/2.jpg" alt="Empanada de pollo">
                     <div class="producto-info">
                         <h3>mediana</h3>
                         <p>15 cm</p>
                     </div>
                 </div>
-                <div class="producto-card">
+                <div class="producto-card" style="--anim-delay: 0.25s;">
                     <img src="/imagen/3.jpg" alt="Empanada de jamón y queso">
                     <div class="producto-info">
                         <h3>grande</h3>
@@ -163,6 +163,22 @@
                 overlayRedes.classList.remove('activo');
             }
         });
+
+        // Animación suave al hacer scroll a los productos
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationPlayState = 'running';
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.producto-card').forEach(card => {
+                observer.observe(card);
+            });
+        }
     </script>
 </body>
 
