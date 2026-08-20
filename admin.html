@@ -21,7 +21,7 @@
             <ul>
                 <li><a href="index.html">Inicio</a></li>
                 <li><a href="#" id="btn-redes">Redes</a></li>
-                <li><a href="carrito.html">Carrito</a></li>
+                <li><a href="carrito.html">🛒Carrito</a></li>
                 <li><a href="index.html#ubicacion">Ubicación</a></li>
             </ul>
         </nav>
@@ -143,17 +143,17 @@
                         style="display:none; font-size:0.85rem; font-weight:600; margin-top:3px;"></div>
                 </div>
 
-                <!-- Selector de opciones / aderezos incluidos -->
+                <!-- Selector de opciones / sabores / bebidas / salsas vinculadas -->
                 <div class="admin-form-group"
-                    style="background:rgba(255,255,255,0.02); padding:12px; border-radius:10px; border:1px solid #333;">
-                    <label>
-                        <span>productos vinculados (a elegir por el cliente):</span>
-                        <small>Opcional</small>
+                    style="background:rgba(255,255,255,0.02); padding:14px; border-radius:10px; border:1px solid #444;">
+                    <label style="display:flex; align-items:center; gap:8px;">
+                        <span>✨ Variantes, Sabores, Bebidas y Salsas vinculadas:</span>
+                        <small style="color:#aaa;">(Ideal para Combos y Sabores)</small>
                     </label>
                     <div
-                        style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-                        <p style="color:#aaa; font-size:0.78rem; margin:0;">
-                            Marca los productos que el cliente podrá distribuir al pedir este producto.
+                        style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+                        <p style="color:#bbb; font-size:0.8rem; margin:0;">
+                            Marca los productos de cada categoría (ej. sabores de empanadas, bebidas, salsas) que el cliente podrá elegir al pedir este producto o combo.
                         </p>
                         <div style="display:flex; gap:6px;">
                             <button type="button" class="btn-grupos-toggle"
@@ -169,7 +169,7 @@
                         </div>
                     </div>
                     <div id="aderezos-container" class="aderezos-chips-wrapper">
-                        <span style="color:#666; font-size:0.8rem;">Cargando aderezos...</span>
+                        <span style="color:#666; font-size:0.8rem;">Cargando productos vinculados...</span>
                     </div>
                 </div>
 
@@ -204,7 +204,8 @@
                         <div class="preview-card">
                             <div class="preview-header">
                                 <span class="preview-badge">📷 Vista previa</span>
-                                <button type="button" class="btn-quitar-preview" onclick="quitarImagenSeleccionada()" title="Quitar imagen seleccionada">✕ Quitar</button>
+                                <button type="button" class="btn-quitar-preview" onclick="quitarImagenSeleccionada()"
+                                    title="Quitar imagen seleccionada">✕ Quitar</button>
                             </div>
                             <div class="preview-img-wrap">
                                 <img id="preview-img" src="" alt="Previsualización">
@@ -481,22 +482,49 @@
         }
 
         // ═══ ADMIN LOGIC ═══
-        let tasaBCV = null;
-        let modoTasa = 'auto'; // 'auto' | 'manual'
-        let tasaManual = null;
+        let modoTasa = localStorage.getItem('tasa_modo') || 'auto';
+        let tasaManual = parseFloat(localStorage.getItem('tasa_manual')) || 700.00;
+        let tasaBCV = parseFloat(localStorage.getItem('tasa_bcv_cache')) || tasaManual || 775.00;
         const API = '/api/productos';
         const API_CATEGORIAS = '/api/categorias';
+
+        // ─── Utilidad fetch con timeout rápido ───
+        async function fetchConTimeout(url, options = {}, timeoutMs = 3000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const res = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return res;
+            } catch (e) {
+                clearTimeout(id);
+                throw e;
+            }
+        }
 
         // ─── Tasa ───
         async function obtenerTasa() {
             try {
-                const modoGuardado = localStorage.getItem('tasa_modo');
-                const valorGuardado = localStorage.getItem('tasa_manual');
-                if (modoGuardado) modoTasa = modoGuardado;
-                if (valorGuardado) tasaManual = parseFloat(valorGuardado);
+                // 1. Intentar primero con el endpoint optimizado del servidor local
+                try {
+                    const resLocal = await fetchConTimeout('/api/tasa', {}, 1500);
+                    if (resLocal.ok) {
+                        const data = await resLocal.json();
+                        if (data && data.tasa && data.tasa > 0) {
+                            tasaBCV = parseFloat(data.tasa);
+                            modoTasa = data.modo || modoTasa;
+                            localStorage.setItem('tasa_bcv_cache', tasaBCV.toString());
+                            localStorage.setItem('tasa_bcv_time', Date.now().toString());
+                            localStorage.setItem('tasa_modo', modoTasa);
+                            sincronizarControlesTasaAdmin();
+                            await aplicarTasaSegunModo();
+                            return;
+                        }
+                    }
+                } catch (e) { }
 
                 try {
-                    const resModo = await fetch('/api/configuracion/tasa_modo');
+                    const resModo = await fetchConTimeout('/api/configuracion/tasa_modo', {}, 1500);
                     if (resModo.ok) {
                         const dataModo = await resModo.json();
                         if (dataModo.value) {
@@ -504,7 +532,7 @@
                             localStorage.setItem('tasa_modo', modoTasa);
                         }
                     }
-                    const resVal = await fetch('/api/configuracion/tasa_manual');
+                    const resVal = await fetchConTimeout('/api/configuracion/tasa_manual', {}, 1500);
                     if (resVal.ok) {
                         const dataVal = await resVal.json();
                         if (dataVal.value) {
@@ -565,26 +593,44 @@
                 if (badgeResumen) badgeResumen.textContent = `✏️ Manual (Bs ${tasaBCV.toFixed(2)})`;
             } else {
                 modoTasa = 'auto';
-                if (tasaInfo) tasaInfo.textContent = 'Cargando tasa del día...';
+                // Verificar si tenemos una tasa reciente en caché local (15 min)
+                const cacheTasa = localStorage.getItem('tasa_bcv_cache');
+                const cacheTime = localStorage.getItem('tasa_bcv_time');
+                const esCacheValido = cacheTasa && cacheTime && (Date.now() - parseInt(cacheTime) < 15 * 60 * 1000);
+
+                if (esCacheValido) {
+                    tasaBCV = parseFloat(cacheTasa);
+                    if (tasaInfo) {
+                        tasaInfo.innerHTML = `✅ Tasa BCV: <strong>Bs ${tasaBCV.toFixed(2)}</strong> <span class="badge-tasa badge-auto">Auto</span>`;
+                    }
+                    if (badgeResumen) badgeResumen.textContent = `🤖 Auto (Bs ${tasaBCV.toFixed(2)})`;
+                    return;
+                }
+
+                if (tasaInfo && !tasaBCV) tasaInfo.textContent = 'Cargando tasa del día...';
                 let exito = false;
                 try {
-                    const resp = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+                    const resp = await fetchConTimeout('https://ve.dolarapi.com/v1/dolares/oficial', {}, 3500);
                     const data = await resp.json();
                     const tasa = data.promedio ?? data.tasa ?? data.rate ??
                         data.oficial?.precio ?? data.oficial?.promedio ?? null;
                     if (typeof tasa === 'number' && tasa > 0) {
                         tasaBCV = tasa;
+                        localStorage.setItem('tasa_bcv_cache', tasa.toString());
+                        localStorage.setItem('tasa_bcv_time', Date.now().toString());
                         exito = true;
                     }
                 } catch (e) { /* ignore */ }
 
                 if (!exito) {
                     try {
-                        const resp = await fetch('https://api.bcv-api.xyz/v1/dolar');
+                        const resp = await fetchConTimeout('https://api.bcv-api.xyz/v1/dolar', {}, 3500);
                         const data = await resp.json();
                         const tasa = data?.dolar?.promedio ?? data?.promedio ?? data?.tasa ?? null;
                         if (typeof tasa === 'number' && tasa > 0) {
                             tasaBCV = tasa;
+                            localStorage.setItem('tasa_bcv_cache', tasa.toString());
+                            localStorage.setItem('tasa_bcv_time', Date.now().toString());
                             exito = true;
                         }
                     } catch (e) { /* ignore */ }
@@ -655,9 +701,10 @@
         }
 
         function formatearBs(usd) {
-            if (tasaBCV === null) return 'Bs --';
-            if (typeof usd !== 'number' || isNaN(usd)) return 'Bs 0.00';
-            return `Bs ${(usd * tasaBCV).toFixed(2)}`;
+            const num = Number(usd);
+            if (isNaN(num)) return 'Bs 0.00';
+            const tasa = (tasaBCV && tasaBCV > 0) ? tasaBCV : (tasaManual || 775.00);
+            return `Bs ${(num * tasa).toFixed(2)}`;
         }
 
         function mostrarError(msg) {
@@ -977,6 +1024,24 @@
         // ─── Productos ───
         let listaProductosGlobal = [];
 
+        function recalcularPrecioSumaAdmin() {
+            let suma = 0;
+            let hayConPrecio = false;
+            document.querySelectorAll('.cb-aderezo:checked').forEach(cb => {
+                const pr = parseFloat(cb.dataset.precio || 0);
+                if (pr > 0) {
+                    hayConPrecio = true;
+                    suma += pr;
+                }
+            });
+
+            const precioInput = document.getElementById('precio');
+            if (hayConPrecio && suma > 0 && precioInput) {
+                // Si el precio está vacío o el usuario está sumando opciones vinculadas
+                precioInput.value = suma.toFixed(2);
+            }
+        }
+
         function actualizarContadorAderezosCat(slug) {
             const block = document.getElementById(`aderezo-block-${slug}`);
             const badge = document.getElementById(`aderezo-badge-${slug}`);
@@ -1087,11 +1152,13 @@
                             <div class="aderezos-categoria-grid">
                                 ${items.map(p => {
                     const checked = seleccionadosIds.includes(parseInt(p.id)) ? 'checked' : '';
+                    const precNum = Number(p.precio_usd) || 0;
+                    const precioBadge = precNum > 0 ? `<small style="color:#ffb4a2; font-weight:700; margin-left:3px;">(+$${precNum.toFixed(2)})</small>` : '';
                     return `
                                         <label class="aderezo-chip">
-                                            <input type="checkbox" class="cb-aderezo" value="${p.id}" data-nombre="${p.nombre.replace(/"/g, '&quot;')}" ${checked} onchange="actualizarContadorAderezosCat('${slug}')">
+                                            <input type="checkbox" class="cb-aderezo" value="${p.id}" data-nombre="${p.nombre.replace(/"/g, '&quot;')}" data-precio="${precNum}" ${checked} onchange="actualizarContadorAderezosCat('${slug}'); recalcularPrecioSumaAdmin();">
                                             <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${p.nombre}">
-                                                ${p.nombre}
+                                                ${p.nombre} ${precioBadge}
                                             </span>
                                         </label>
                                     `;
@@ -1125,7 +1192,7 @@
 
                 return `
                     <tr>
-                        <td>${p.imagen ? `<img class="admin-table-img" src="${p.imagen}" alt="${p.nombre}">` : '—'}</td>
+                        <td>${p.imagen ? `<img class="admin-table-img" src="${p.imagen}" alt="${p.nombre}" loading="lazy" decoding="async">` : '—'}</td>
                         <td><strong>${p.nombre}</strong></td>
                         <td>${precioUsdHtml}</td>
                         <td>${precioBsHtml}</td>
@@ -1524,12 +1591,16 @@
             }
         }
 
-        // ─── Inicialización ───
+        // ─── Inicialización en paralelo ───
         async function iniciarAdmin() {
-            await obtenerTasa();
+            // Cargar categorías y productos de la base de datos local
             await cargarCategorias();
-            await cargarProductos();
-            await cargarEstadoNegocio();
+            cargarProductos();
+            // Tasa y estado en paralelo
+            Promise.allSettled([
+                obtenerTasa(),
+                cargarEstadoNegocio()
+            ]);
         }
 
     </script>

@@ -64,11 +64,35 @@ if (!fs.existsSync(DB_PATH) && fs.existsSync(OLD_DB_PATH)) {
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 
+const zlib = require('zlib');
+
 // ═══════════════════════════════════════════════
 // MIDDLEWARE Y SEGURIDAD
 // ═══════════════════════════════════════════════
 app.use(cors());
 app.use(express.json());
+
+// Compresión Gzip nativa para respuestas JSON y texto
+app.use((req, res, next) => {
+    const acceptEncoding = req.headers['accept-encoding'] || '';
+    if (!acceptEncoding.includes('gzip')) return next();
+
+    const originalJson = res.json.bind(res);
+    res.json = function(body) {
+        const jsonStr = JSON.stringify(body);
+        if (jsonStr.length < 512) {
+            return originalJson(body);
+        }
+        zlib.gzip(Buffer.from(jsonStr, 'utf-8'), (err, buffer) => {
+            if (err) return originalJson(body);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Content-Encoding', 'gzip');
+            res.setHeader('Vary', 'Accept-Encoding');
+            res.send(buffer);
+        });
+    };
+    next();
+});
 
 // Proteger archivos de base de datos, backups y sensibles contra descargas públicas
 app.use((req, res, next) => {
@@ -80,8 +104,24 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(express.static(ROOT_DIR));
-app.use('/loadspro', express.static(LOADS_DIR));
+// Servir estáticos con políticas de caché optimizadas para velocidad
+app.use(express.static(ROOT_DIR, {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache');
+        } else if (filePath.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+        } else if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+        }
+    }
+}));
+
+app.use('/loadspro', express.static(LOADS_DIR, {
+    setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=604800');
+    }
+}));
 
 // ─── Crear tablas si no existen ───
 db.exec(`
@@ -370,8 +410,61 @@ app.delete('/api/productos/:id', noCache, (req, res) => {
 });
 
 // ═══════════════════════════════════════════════
-// API REST - CONFIGURACIÓN
+// API REST - CONFIGURACIÓN Y TASA
 // ═══════════════════════════════════════════════
+
+let cachedBcvRate = null;
+let lastBcvFetchTime = 0;
+
+async function obtenerTasaServidor() {
+    const modoRow = db.prepare('SELECT value FROM configuracion WHERE key = ?').get('tasa_modo');
+    const manualRow = db.prepare('SELECT value FROM configuracion WHERE key = ?').get('tasa_manual');
+    const modo = modoRow ? modoRow.value : 'auto';
+    const manualVal = manualRow && !isNaN(parseFloat(manualRow.value)) ? parseFloat(manualRow.value) : 700.00;
+
+    if (modo === 'manual') {
+        return { modo: 'manual', tasa: manualVal };
+    }
+
+    const now = Date.now();
+    if (cachedBcvRate && (now - lastBcvFetchTime < 15 * 60 * 1000)) {
+        return { modo: 'auto', tasa: cachedBcvRate };
+    }
+
+    try {
+        const resp = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', { signal: AbortSignal.timeout(4000) });
+        const data = await resp.json();
+        const tasa = data.promedio ?? data.tasa ?? data.rate ?? data.oficial?.precio ?? data.oficial?.promedio ?? null;
+        if (typeof tasa === 'number' && tasa > 0) {
+            cachedBcvRate = tasa;
+            lastBcvFetchTime = now;
+            return { modo: 'auto', tasa: cachedBcvRate };
+        }
+    } catch(e) {
+        try {
+            const resp2 = await fetch('https://api.bcv-api.xyz/v1/dolar', { signal: AbortSignal.timeout(4000) });
+            const data2 = await resp2.json();
+            const tasa2 = data2?.dolar?.promedio ?? data2?.promedio ?? data2?.tasa ?? null;
+            if (typeof tasa2 === 'number' && tasa2 > 0) {
+                cachedBcvRate = tasa2;
+                lastBcvFetchTime = now;
+                return { modo: 'auto', tasa: cachedBcvRate };
+            }
+        } catch(e2) {}
+    }
+
+    return { modo: 'auto', tasa: cachedBcvRate || manualVal || 775.00 };
+}
+
+// Endpoint unificado de tasa de cambio
+app.get('/api/tasa', noCache, async (req, res) => {
+    try {
+        const resultado = await obtenerTasaServidor();
+        res.json(resultado);
+    } catch(e) {
+        res.json({ modo: 'auto', tasa: 775.00 });
+    }
+});
 
 // Obtener una configuración
 app.get('/api/configuracion/:key', noCache, (req, res) => {

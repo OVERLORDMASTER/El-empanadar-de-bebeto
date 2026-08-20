@@ -27,12 +27,30 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   RESET
+/* ═══════════════════════════════════════════════════════════════
+   RESET Y OPTIMIZACIONES DE RENDIMIENTO
    ═══════════════════════════════════════════════════════════════ */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+/* Optimización táctil y de clic instantáneo (elimina retraso de 300ms) */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"],
+.producto-card-carrito,
+.aderezo-card-selectable,
+.btn-entrega-superior,
+.categoria-card-item,
+.btn-qty-modal,
+.btn-qty-card-mini {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -420,12 +438,10 @@ body {
     overflow: hidden;
     box-shadow: var(--sombra-tarjeta);
     border: 1px solid #333;
-    animation: animacionSuaveProducto 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: animacionSuaveProducto 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
     animation-delay: var(--anim-delay, 0s);
-    will-change: transform, opacity;
     cursor: default;
     user-select: none;
-    -webkit-tap-highlight-color: transparent;
     outline: none;
 }
 
@@ -712,7 +728,7 @@ h1 {
     font-weight: 700;
     font-size: 1rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.08s ease;
     text-align: center;
     letter-spacing: 0.5px;
 }
@@ -721,6 +737,10 @@ h1 {
     border-color: var(--vinotinto-claro);
     background: #2a2a2a;
     color: #fff;
+}
+
+.btn-entrega-superior:active {
+    transform: scale(0.96);
 }
 
 .btn-entrega-superior.seleccionado {
@@ -763,10 +783,9 @@ h1 {
     border: 1px solid #555;
     min-width: 0;
     width: 160px;
-    animation: animacionSuaveProducto 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: animacionSuaveProducto 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
     animation-delay: var(--anim-delay, 0s);
-    will-change: transform, opacity;
-    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .producto-card-carrito:hover {
@@ -831,7 +850,7 @@ h1 {
     cursor: pointer;
     font-weight: 600;
     font-size: 0.85rem;
-    transition: background 0.2s, transform 0.15s ease, box-shadow 0.2s ease;
+    transition: background-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
 }
 
 .producto-card-carrito .btn-agregar:hover {
@@ -841,7 +860,7 @@ h1 {
 }
 
 .producto-card-carrito .btn-agregar:active {
-    transform: scale(0.97);
+    transform: scale(0.94) !important;
 }
 
 .productos-vacio-msg {
@@ -933,11 +952,15 @@ h1 {
     font-size: 22px;
     color: white;
     padding: 0 18px;
-    transition: background 0.2s;
+    transition: background-color 0.15s ease, transform 0.08s ease;
 }
 
 .btn-flotante-carrito:hover {
     background: var(--vinotinto-claro);
+}
+
+.btn-flotante-carrito:active {
+    transform: translateX(-50%) scale(0.95);
 }
 
 .contador-flotante {
@@ -2822,9 +2845,8 @@ body.login-page .header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    animation: animacionSuaveCategoria 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: animacionSuaveCategoria 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
     animation-delay: var(--cat-delay, 0s);
-    will-change: transform, opacity;
 }
 
 .categoria-header {
@@ -2995,6 +3017,42 @@ body.login-page .header {
 
 #map-info button:hover {
     background: var(--vinotinto-claro);
+}
+
+/* Selector interactivo de rutas alternativas */
+.map-routes-container {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0 10px 0;
+    overflow-x: auto;
+    padding: 4px 2px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.ruta-badge-btn {
+    background: #1a1a1a !important;
+    border: 1.5px solid #555 !important;
+    color: #ddd !important;
+    padding: 8px 14px !important;
+    border-radius: 20px !important;
+    font-size: 0.82rem !important;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    margin: 4px 2px !important;
+    line-height: 1.3;
+}
+
+.ruta-badge-btn:hover {
+    border-color: var(--vinotinto-claro) !important;
+    background: #262626 !important;
+}
+
+.ruta-badge-btn.activa {
+    background: #480c10 !important;
+    border-color: #ff4d6d !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(230, 57, 70, 0.45);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3397,7 +3455,7 @@ body.carrito-panel-activo {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s, transform 0.1s;
+    transition: background-color 0.15s ease, transform 0.06s ease;
 }
 
 .btn-qty-modal:hover {
@@ -3405,7 +3463,7 @@ body.carrito-panel-activo {
 }
 
 .btn-qty-modal:active {
-    transform: scale(0.92);
+    transform: scale(0.88) !important;
 }
 
 .modal-qty-num {
@@ -3497,17 +3555,78 @@ body.carrito-panel-activo {
 
 /* Insignia de aderezo incluido en ítem del carrito */
 .carrito-item-opcion {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     font-size: 0.78rem;
     color: #f1c40f;
-    background: rgba(241, 196, 15, 0.12);
-    padding: 2px 8px;
-    border-radius: 6px;
-    border: 1px solid rgba(241, 196, 15, 0.25);
-    margin-top: 2px;
-    width: fit-content;
+    margin-top: 3px;
+    width: 100%;
+}
+
+.carrito-item-subgrupo {
+    display: block;
+    font-size: 0.76rem;
+    color: #f1c40f;
+    background: rgba(241, 196, 15, 0.09);
+    border: 1px solid rgba(241, 196, 15, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1.35;
+}
+
+/* Secciones por categoría en el modal de variantes/combos */
+.modal-seccion-categoria {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.modal-seccion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modal-seccion-titulo-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-seccion-icon {
+    font-size: 1.2rem;
+}
+
+.modal-seccion-titulo {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #fff;
+    letter-spacing: 0.3px;
+}
+
+.modal-seccion-contador {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #bbb;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.modal-seccion-contador.tiene-seleccionados {
+    background: rgba(39, 174, 96, 0.2);
+    color: #2ecc71;
+    border-color: rgba(39, 174, 96, 0.4);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3646,4 +3765,47 @@ body.carrito-panel-activo {
         min-width: 24px !important;
         color: #fff !important;
     }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRECIOS DINÁMICOS EN MODAL DE COMBOS Y PRODUCTOS
+   ═══════════════════════════════════════════════════════════════ */
+.aderezo-card-precio {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffb4a2;
+    margin-bottom: 4px;
+}
+
+.aderezo-card-precio.incluido {
+    color: #80ed99;
+    font-weight: 600;
+    font-size: 0.76rem;
+}
+
+.modal-precio-live-box {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 0.92rem;
+    color: #eee;
+}
+
+.modal-precio-live-box strong {
+    color: #ff4d6d;
+    font-size: 1.08rem;
+}
+
+.btn-agregar.btn-personalizar {
+    background: linear-gradient(135deg, var(--vinotinto), #800f2f);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-agregar.btn-personalizar:hover {
+    background: linear-gradient(135deg, var(--vinotinto-claro), #a4161a);
 }
