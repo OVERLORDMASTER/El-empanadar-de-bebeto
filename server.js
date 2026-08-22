@@ -101,6 +101,10 @@ app.use((req, res, next) => {
     if (forbiddenExts.some(ext => cleanUrl.endsWith(ext)) || cleanUrl.includes('..') || cleanUrl.includes('/.')) {
         return res.status(403).json({ error: 'Acceso denegado a archivos protegidos' });
     }
+    // Bloquear acceso a rutas /admin genéricas
+    if (cleanUrl === '/admin' || cleanUrl === '/admin/' || cleanUrl === '/admin.html') {
+        return res.status(404).send('Not Found');
+    }
     next();
 });
 
@@ -354,10 +358,9 @@ app.post('/api/productos', noCache, uploadMiddleware, (req, res) => {
     });
 });
 
-// Actualizar producto
 app.put('/api/productos/:id', noCache, uploadMiddleware, (req, res) => {
     const { id } = req.params;
-    const { nombre, precio_usd, caracteristica, categoria, tipo_entrega, opciones_incluidas } = req.body;
+    const { nombre, precio_usd, caracteristica, categoria, tipo_entrega, opciones_incluidas, eliminar_imagen } = req.body;
     if (!nombre || !caracteristica) {
         return res.status(400).json({ error: 'El nombre y la característica son obligatorios' });
     }
@@ -369,9 +372,9 @@ app.put('/api/productos/:id', noCache, uploadMiddleware, (req, res) => {
     const catId = obtenerOCrearCategoria(categoria);
     const entrega = tipo_entrega || 'ambos';
     const opcionesStr = normalizarOpcionesStr(opciones_incluidas);
+    const debeEliminarImagen = (eliminar_imagen === '1' || eliminar_imagen === 'true' || eliminar_imagen === true);
 
     if (nuevaImagen) {
-        // Eliminar imagen anterior si existía
         const prodAnterior = db.prepare('SELECT imagen FROM productos WHERE id=?').get(id);
         if (prodAnterior && prodAnterior.imagen) {
             const imgPath = path.join(LOADS_DIR, prodAnterior.imagen);
@@ -385,6 +388,20 @@ app.put('/api/productos/:id', noCache, uploadMiddleware, (req, res) => {
             SET nombre=?, precio_usd=?, caracteristica=?, imagen=?, categoria_id=?, tipo_entrega=?, opciones_incluidas=?
             WHERE id=?
         `).run(nombre, precioNum, caracteristica, nuevaImagen, catId, entrega, opcionesStr, id);
+    } else if (debeEliminarImagen) {
+        const prodAnterior = db.prepare('SELECT imagen FROM productos WHERE id=?').get(id);
+        if (prodAnterior && prodAnterior.imagen) {
+            const imgPath = path.join(LOADS_DIR, prodAnterior.imagen);
+            if (fs.existsSync(imgPath)) {
+                try { fs.unlinkSync(imgPath); } catch(e){}
+            }
+        }
+
+        db.prepare(`
+            UPDATE productos
+            SET nombre=?, precio_usd=?, caracteristica=?, imagen=NULL, categoria_id=?, tipo_entrega=?, opciones_incluidas=?
+            WHERE id=?
+        `).run(nombre, precioNum, caracteristica, catId, entrega, opcionesStr, id);
     } else {
         db.prepare(`
             UPDATE productos

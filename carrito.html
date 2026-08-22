@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carrito - El Empanadar de Bebeto</title>
     <link rel="shortcut icon" href="/imagen/logo-trans.png" type="image/x-icon">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3.5">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 
@@ -108,10 +108,12 @@
             </div>
 
             <div class="datos-cliente">
-                <input type="text" id="cliente-nombre" placeholder="Nombre">
-                <input type="text" id="cliente-apellido" placeholder="Apellido">
+                <input type="text" id="cliente-nombre" placeholder="Nombre"
+                    oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '')">
+                <input type="text" id="cliente-apellido" placeholder="Apellido"
+                    oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '')">
                 <input type="tel" id="cliente-telefono" placeholder="Teléfono" maxlength="16" pattern="[0-9]{0,16}"
-                    inputmode="numeric">
+                    inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 <select id="cliente-pago">
                     <option value="" disabled selected hidden>Método de pago</option>
                     <option value="Pago Móvil">Pago Móvil</option>
@@ -153,7 +155,6 @@
             </div>
             <div id="map-container"></div>
             <div id="map-info">
-                <div id="map-routes-selector" class="map-routes-container oculto"></div>
                 <p id="map-status">Toca en el mapa o usá el buscador para marcar tu ubicación.</p>
                 <button id="btn-confirmar-direccion" class="oculto" onclick="confirmarDireccion()">Confirmar Dirección y
                     Calcular</button>
@@ -233,9 +234,7 @@
         let map; // Instancia del mapa
         let mapMarker; // Marcador del cliente
         let storeMarker; // Marcador de El Empanadar de Bebeto
-        let capasRutas = []; // Capas de polilíneas viales de OSRM
-        let rutasDisponibles = []; // Lista de rutas calculadas por OSRM
-        let rutaSeleccionadaIndex = 0; // Índice de la ruta activa
+        let capaRuta = null; // Capa de polilínea vial de OSRM
         let estadoNegocio = {
             abierto: true, // Asumir abierto hasta que se verifique
             mensaje: '',
@@ -247,7 +246,7 @@
         // --- CONFIGURACIÓN MAPA ---
         const miLat = 10.07861173915512;
         const miLon = -69.32088931725866;
-        const numeroWhatsApp = "584264617572";
+        const numeroWhatsApp = "584122845905";
 
         // Utilidad para fetch con timeout rápido
         async function fetchConTimeout(url, options = {}, timeoutMs = 3000) {
@@ -526,23 +525,30 @@
         function calcularPrecioBaseCombo(p) {
             if (!p) return 0;
             const precioDirecto = Number(p.precio_usd) || 0;
+            if (precioDirecto > 0) {
+                return precioDirecto;
+            }
             if (!p.opciones_incluidas || !Array.isArray(p.opciones_incluidas) || p.opciones_incluidas.length === 0) {
                 return precioDirecto;
             }
 
-            let sumaOpciones = 0;
-            let hayOpcionesConPrecio = false;
+            let sumaBase = 0;
+            let hayBaseConPrecio = false;
 
             p.opciones_incluidas.forEach(opt => {
                 const optProd = buscarProductoOpcion(opt);
                 if (optProd && optProd.precio_usd !== null && !isNaN(optProd.precio_usd) && Number(optProd.precio_usd) > 0) {
-                    hayOpcionesConPrecio = true;
-                    sumaOpciones += Number(optProd.precio_usd);
+                    const catNombre = (optProd.categoria_nombre || '').toLowerCase();
+                    const esSalsaOBebida = catNombre.includes('salsa') || catNombre.includes('bebida') || catNombre.includes('aderezo');
+                    if (!esSalsaOBebida) {
+                        hayBaseConPrecio = true;
+                        sumaBase += Number(optProd.precio_usd);
+                    }
                 }
             });
 
-            if (hayOpcionesConPrecio && sumaOpciones > 0) {
-                return sumaOpciones;
+            if (hayBaseConPrecio && sumaBase > 0) {
+                return sumaBase;
             }
 
             return precioDirecto;
@@ -601,9 +607,7 @@
                         precioBsHtml = formatearBs(precioCalculado);
                     }
 
-                    if (tieneOpciones) {
-                        botonAgregarHtml = `<button class="btn-agregar btn-personalizar" onclick="agregarAlCarrito(${p.id})">Agregar</button>`;
-                    } else if (tienePrecio) {
+                    if (tieneOpciones || tienePrecio) {
                         botonAgregarHtml = `<button class="btn-agregar" onclick="agregarAlCarrito(${p.id})">Agregar</button>`;
                     }
 
@@ -774,13 +778,10 @@
 
         async function trazarRutaVial(latDestino, lonDestino) {
             const statusEl = document.getElementById('map-status');
-            const routesSelectorEl = document.getElementById('map-routes-selector');
-            statusEl.innerHTML = '⏳ Calculando las mejores rutas por las calles...';
-            routesSelectorEl.classList.add('oculto');
-            routesSelectorEl.innerHTML = '';
+            statusEl.innerHTML = '⏳ Calculando ruta por las calles...';
 
             const coords = `${miLon},${miLat};${lonDestino},${latDestino}`;
-            // Solicitamos rutas alternativas a OSRM
+            // Solicitamos rutas a OSRM
             const params = '?overview=full&geometries=geojson&alternatives=true';
             const urlPrimary = `https://router.project-osrm.org/route/v1/driving/${coords}${params}`;
             const urlFallback = `https://routing.openstreetmap.de/routed-car/route/v1/driving/${coords}${params}`;
@@ -798,112 +799,43 @@
                 }
 
                 if (data && data.code === 'Ok' && data.routes && data.routes.length > 0) {
-                    rutasDisponibles = data.routes;
-                    rutaSeleccionadaIndex = 0; // Por defecto la primera (recomendada)
+                    // Ordenar por distancia ascendente para seleccionar SIEMPRE la ruta más corta
+                    data.routes.sort((a, b) => a.distance - b.distance);
+                    const rutaCorta = data.routes[0];
 
-                    // Limpiar capas previas del mapa
-                    capasRutas.forEach(layer => map.removeLayer(layer));
-                    capasRutas = [];
+                    distanciaKm = rutaCorta.distance / 1000;
+                    const duracionMin = Math.round(rutaCorta.duration / 60);
+                    costoEnvio = calcularCostoEnvio(distanciaKm);
 
-                    // Dibujar todas las rutas encontradas
-                    rutasDisponibles.forEach((route, idx) => {
-                        const puntosViales = route.geometry.coordinates.map(c => [c[1], c[0]]);
-                        const esPrincipal = idx === 0;
+                    // Limpiar capa previa del mapa
+                    if (capaRuta) {
+                        map.removeLayer(capaRuta);
+                        capaRuta = null;
+                    }
 
-                        const polyline = L.polyline(puntosViales, {
-                            color: esPrincipal ? '#d90429' : '#6c757d',
-                            weight: esPrincipal ? 6 : 5,
-                            opacity: esPrincipal ? 0.95 : 0.60,
-                            dashArray: esPrincipal ? null : '6, 8',
-                            lineJoin: 'round',
-                            lineCap: 'round'
-                        }).addTo(map);
+                    // Dibujar únicamente la ruta más corta
+                    const puntosViales = rutaCorta.geometry.coordinates.map(c => [c[1], c[0]]);
+                    capaRuta = L.polyline(puntosViales, {
+                        color: '#d90429',
+                        weight: 6,
+                        opacity: 0.95,
+                        lineJoin: 'round',
+                        lineCap: 'round'
+                    }).addTo(map);
 
-                        // Permitir hacer click directo en la línea del mapa para seleccionarla
-                        polyline.on('click', () => {
-                            seleccionarRuta(idx);
-                        });
+                    map.fitBounds(capaRuta.getBounds(), { padding: [40, 40] });
 
-                        capasRutas.push(polyline);
-                    });
-
-                    // Activar la primera ruta por defecto y ajustar el encuadre
-                    seleccionarRuta(0, true);
-
-                    // Renderizar botones de selección si hay 2 o más rutas
-                    renderizarSelectorRutas();
+                    // Mostrar información limpia y sin duplicados
+                    statusEl.innerHTML = `📍 <strong>${distanciaKm.toFixed(2)} km</strong> (~${duracionMin} min) | Delivery: <strong>$${costoEnvio.toFixed(2)}</strong>`;
 
                     document.getElementById('btn-confirmar-direccion').classList.remove('oculto');
                 } else {
                     statusEl.textContent = '❌ No se pudo trazar la ruta en vehículo.';
                 }
             } catch (err) {
-                console.error('Error calculando rutas OSRM:', err);
-                statusEl.textContent = '❌ Error de red al calcular las rutas.';
+                console.error('Error calculando ruta OSRM:', err);
+                statusEl.textContent = '❌ Error de red al calcular la ruta.';
             }
-        }
-
-        function seleccionarRuta(index, autoFit = false) {
-            if (!rutasDisponibles || !rutasDisponibles[index]) return;
-            rutaSeleccionadaIndex = index;
-
-            const route = rutasDisponibles[index];
-            distanciaKm = route.distance / 1000;
-            const duracionMin = Math.round(route.duration / 60);
-            costoEnvio = calcularCostoEnvio(distanciaKm);
-
-            // Re-estilizar capas en el mapa (la activa resaltada en rojo vino, las otras en gris punteado)
-            capasRutas.forEach((layer, idx) => {
-                const esActiva = idx === index;
-                layer.setStyle({
-                    color: esActiva ? '#d90429' : '#6c757d',
-                    weight: esActiva ? 6 : 5,
-                    opacity: esActiva ? 0.95 : 0.60,
-                    dashArray: esActiva ? null : '6, 8'
-                });
-                if (esActiva) {
-                    layer.bringToFront();
-                }
-            });
-
-            if (autoFit && capasRutas[index]) {
-                map.fitBounds(capasRutas[index].getBounds(), { padding: [40, 40] });
-            }
-
-            // Actualizar botones visuales del selector
-            document.querySelectorAll('.ruta-badge-btn').forEach((btn, idx) => {
-                btn.classList.toggle('activa', idx === index);
-            });
-
-            const statusEl = document.getElementById('map-status');
-            const etiquetaRuta = rutasDisponibles.length > 1 ? `(Ruta ${index + 1}) ` : '';
-            statusEl.innerHTML = `📍 ${etiquetaRuta}<strong>${distanciaKm.toFixed(2)} km</strong> (~${duracionMin} min) | Delivery: <strong>$${costoEnvio.toFixed(2)}</strong>`;
-        }
-
-        function renderizarSelectorRutas() {
-            const selectorEl = document.getElementById('map-routes-selector');
-            if (!rutasDisponibles || rutasDisponibles.length <= 1) {
-                selectorEl.classList.add('oculto');
-                selectorEl.innerHTML = '';
-                return;
-            }
-
-            selectorEl.innerHTML = '';
-            selectorEl.classList.remove('oculto');
-
-            rutasDisponibles.forEach((r, idx) => {
-                const dist = (r.distance / 1000).toFixed(2);
-                const dur = Math.round(r.duration / 60);
-                const costo = calcularCostoEnvio(r.distance / 1000).toFixed(2);
-                const nombre = idx === 0 ? 'Ruta 1 (Recomendada)' : `Ruta ${idx + 1} (Alternativa)`;
-
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = `ruta-badge-btn ${idx === rutaSeleccionadaIndex ? 'activa' : ''}`;
-                btn.innerHTML = `<span>${nombre}</span><strong>${dist} km • ~${dur} min ($${costo})</strong>`;
-                btn.onclick = () => seleccionarRuta(idx);
-                selectorEl.appendChild(btn);
-            });
         }
 
         function handleLocationFound(lat, lon) {
@@ -984,23 +916,20 @@
             toggleMapPanel(true);
             inicializarMapa();
             document.getElementById('map-search-input').value = '';
-            if (clienteLat && clienteLon && capasRutas.length > 0) {
+            if (clienteLat && clienteLon && capaRuta) {
                 document.getElementById('btn-confirmar-direccion').classList.remove('oculto');
-                renderizarSelectorRutas();
-                if (capasRutas[rutaSeleccionadaIndex]) {
-                    map.fitBounds(capasRutas[rutaSeleccionadaIndex].getBounds(), { padding: [40, 40] });
-                }
+                map.fitBounds(capaRuta.getBounds(), { padding: [40, 40] });
             } else {
                 document.getElementById('map-status').textContent = 'Toca en el mapa o usá el buscador para marcar tu ubicación.';
                 document.getElementById('btn-confirmar-direccion').classList.add('oculto');
-                document.getElementById('map-routes-selector').classList.add('oculto');
                 if (mapMarker) {
                     map.removeLayer(mapMarker);
                     mapMarker = null;
                 }
-                capasRutas.forEach(layer => map.removeLayer(layer));
-                capasRutas = [];
-                rutasDisponibles = [];
+                if (capaRuta) {
+                    map.removeLayer(capaRuta);
+                    capaRuta = null;
+                }
             }
         }
 
@@ -1009,8 +938,7 @@
             document.getElementById('cliente-direccion').value = direccionCompleta || `Ubicación marcada (${distanciaKm.toFixed(2)} km)`;
             actualizarPanelCarrito();
             toggleMapPanel(false);
-            const etiquetaRuta = rutasDisponibles.length > 1 ? ` (Ruta ${rutaSeleccionadaIndex + 1})` : '';
-            alert(`¡Dirección confirmada con éxito!\n\n🚗 Trayectoria${etiquetaRuta}: ${distanciaKm.toFixed(2)} km\n🛵 Costo de envío: $${costoEnvio.toFixed(2)}`);
+            alert(`¡Dirección confirmada con éxito!\n\n🚗 Trayectoria: ${distanciaKm.toFixed(2)} km\n🛵 Costo de envío: $${costoEnvio.toFixed(2)}`);
         }
 
         // --- Función para quitar el envío ---
@@ -1020,10 +948,10 @@
             direccionCompleta = '';
             clienteLat = null;
             clienteLon = null;
-            capasRutas.forEach(layer => map.removeLayer(layer));
-            capasRutas = [];
-            rutasDisponibles = [];
-            document.getElementById('map-routes-selector').classList.add('oculto');
+            if (capaRuta) {
+                map.removeLayer(capaRuta);
+                capaRuta = null;
+            }
             if (mapMarker && map) {
                 map.removeLayer(mapMarker);
                 mapMarker = null;
@@ -1032,10 +960,11 @@
             actualizarPanelCarrito();
         }
 
-        // ─── Modal de Selección de Variantes, Sabores, Combos y Adicionales (1 a 1 con límites) ───
+        // ─── Modal de Selección de Variantes, Sabores, Combos y Adicionales ───
         let productoModalActual = null;
         let distribucionAderezos = {}; // Map of { [idx]: count }
         let gruposOpcionesActuales = {}; // { [catNombre]: [ { opt, idx, prod } ] }
+        let editandoItemKey = null;
 
         function obtenerIconoCategoria(nombre) {
             if (!nombre) return '🍽️';
@@ -1055,36 +984,87 @@
             return n.includes('salsa') || n.includes('aderezo') || n.includes('guasacaca');
         }
 
-        function esCategoriaEmpanadas(catNombre) {
-            if (!catNombre) return false;
-            const n = catNombre.toLowerCase();
-            return n.includes('empanada') || n.includes('sabor') || n.includes('combo');
-        }
-
         function esCategoriaBebidas(catNombre) {
             if (!catNombre) return false;
             const n = catNombre.toLowerCase();
             return n.includes('bebida') || n.includes('refresco') || n.includes('jugo') || n.includes('malta') || n.includes('agua');
         }
 
-        function esCategoriaAdicional(catNombre) {
-            return esCategoriaSalsas(catNombre) || esCategoriaBebidas(catNombre);
+        function esCategoriaEmpanadas(catNombre) {
+            if (!catNombre) return false;
+            const n = catNombre.toLowerCase();
+            return n.includes('empanada') || n.includes('sabor') || n.includes('combo') || n.includes('gourmet') || n.includes('popular');
         }
 
-        function calcularTotalEmpanadasEnModal() {
-            let totalEmp = 0;
+        // Determinar si una categoría del modal es "base" (empanadas/plato principal) o "acompañamiento" (bebidas/salsas gratuitas o incluidas)
+        function esCategoriaBase(catNombre, items) {
+            const esSalsa = esCategoriaSalsas(catNombre);
+            const esBebida = esCategoriaBebidas(catNombre);
+
+            if (esSalsa || esBebida) {
+                // Si todos sus items son $0 o no tienen precio, es categoría de acompañamiento incluida
+                const tienePrecio = items.some(it => {
+                    const pr = it.prod ? Number(it.prod.precio_usd) : 0;
+                    return pr > 0;
+                });
+                return tienePrecio;
+            }
+
+            // Por defecto, categorías de empanadas, sabores, combos son base
+            return true;
+        }
+
+        function calcularTotalBaseSeleccionado() {
+            let total = 0;
             for (const [catNombre, items] of Object.entries(gruposOpcionesActuales)) {
-                if (esCategoriaEmpanadas(catNombre)) {
-                    totalEmp += items.reduce((s, it) => s + (distribucionAderezos[it.idx] || 0), 0);
+                if (esCategoriaBase(catNombre, items)) {
+                    total += items.reduce((s, it) => s + (distribucionAderezos[it.idx] || 0), 0);
                 }
             }
-            return totalEmp;
+            return total;
+        }
+
+        function ajustarAcompanamientosAlCupo() {
+            const totalBase = calcularTotalBaseSeleccionado();
+            for (const [catNombre, items] of Object.entries(gruposOpcionesActuales)) {
+                if (!esCategoriaBase(catNombre, items)) {
+                    let totalCat = items.reduce((s, it) => s + (distribucionAderezos[it.idx] || 0), 0);
+                    if (totalCat > totalBase) {
+                        let exceso = totalCat - totalBase;
+                        // Reducir exceso desde los últimos items de esta categoría
+                        for (let i = items.length - 1; i >= 0 && exceso > 0; i--) {
+                            const idx = items[i].idx;
+                            const cant = distribucionAderezos[idx] || 0;
+                            if (cant > 0) {
+                                const quitar = Math.min(cant, exceso);
+                                distribucionAderezos[idx] -= quitar;
+                                exceso -= quitar;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let feedbackTimeout = null;
+        function mostrarFeedbackModal(texto) {
+            const statusBox = document.getElementById('aderezo-status-box');
+            if (!statusBox) return;
+
+            clearTimeout(feedbackTimeout);
+            statusBox.className = 'aderezo-distribucion-status feedback-alerta';
+            statusBox.innerHTML = `⚠️ ${texto}`;
+
+            feedbackTimeout = setTimeout(() => {
+                actualizarEstadoDistribucionModal();
+            }, 3200);
         }
 
         function abrirModalAderezos(producto) {
             productoModalActual = producto;
             distribucionAderezos = {};
             gruposOpcionesActuales = {};
+            editandoItemKey = null;
 
             const opciones = producto.opciones_incluidas || [];
             if (!opciones || opciones.length === 0) return;
@@ -1120,6 +1100,7 @@
 
             const categorias = Object.keys(gruposOpcionesActuales);
             const esMulticategoria = categorias.length > 1;
+            const totalBase = calcularTotalBaseSeleccionado();
 
             let htmlFinal = '';
 
@@ -1127,17 +1108,27 @@
                 const items = gruposOpcionesActuales[catNombre];
                 const icono = obtenerIconoCategoria(catNombre);
                 const slugCat = 'cat-modal-' + catIdx;
+                const esBase = esCategoriaBase(catNombre, items);
                 const totalCatSeleccionado = items.reduce((s, it) => s + (distribucionAderezos[it.idx] || 0), 0);
 
-                let badgeTexto = `${totalCatSeleccionado} selec.`;
-                let badgeClass = totalCatSeleccionado > 0 ? 'tiene-seleccionados' : '';
+                let badgeTexto = '';
+                let badgeClass = '';
 
-                if (esCategoriaSalsas(catNombre)) {
-                    badgeTexto = `🥫 ${totalCatSeleccionado} salsa(s)`;
-                } else if (esCategoriaBebidas(catNombre)) {
-                    badgeTexto = `🥤 ${totalCatSeleccionado} bebida(s)`;
-                } else if (esCategoriaEmpanadas(catNombre)) {
-                    badgeTexto = `🥟 ${totalCatSeleccionado} empanada(s)`;
+                if (esBase) {
+                    badgeTexto = `🥟 ${totalCatSeleccionado} seleccionada(s)`;
+                    badgeClass = totalCatSeleccionado > 0 ? 'tiene-seleccionados' : '';
+                } else {
+                    if (totalBase === 0) {
+                        badgeTexto = `${icono} 0 / 0 disp.`;
+                        badgeClass = 'bloqueado';
+                    } else {
+                        badgeTexto = `${icono} ${totalCatSeleccionado} de ${totalBase} disp.`;
+                        if (totalCatSeleccionado === totalBase) {
+                            badgeClass = 'tiene-seleccionados cupo-lleno';
+                        } else if (totalCatSeleccionado > 0) {
+                            badgeClass = 'tiene-seleccionados parcial';
+                        }
+                    }
                 }
 
                 let cardsHtml = items.map(itemData => {
@@ -1166,8 +1157,18 @@
                     const isSelected = count > 0;
                     const btnMinusDisabled = count <= 0;
 
+                    // Si no es base, deshabilitar botón + si totalBase es 0 o si ya se alcanzó el cupo de totalBase
+                    let btnPlusDisabled = false;
+                    if (!esBase) {
+                        if (totalBase === 0 || totalCatSeleccionado >= totalBase) {
+                            btnPlusDisabled = true;
+                        }
+                    }
+
+                    const cardDisabledClass = (!esBase && totalBase === 0 && !isSelected) ? 'deshabilitada' : '';
+
                     return `
-                        <div class="aderezo-card-selectable ${isSelected ? 'seleccionada' : ''}" id="aderezo-card-${idx}" onclick="tocarTarjetaAderezo(${idx})">
+                        <div class="aderezo-card-selectable ${isSelected ? 'seleccionada' : ''} ${cardDisabledClass}" id="aderezo-card-${idx}" onclick="tocarTarjetaAderezo(${idx})">
                             <div class="aderezo-badge-count" id="aderezo-badge-${idx}" style="${count > 0 ? 'display:block;' : 'display:none;'}">x${count}</div>
                             ${imgHtml}
                             <div class="producto-body">
@@ -1177,7 +1178,7 @@
                                 <div class="aderezo-card-stepper-box" onclick="event.stopPropagation()">
                                     <button type="button" class="btn-qty-card-mini" id="btn-minus-${idx}" onclick="cambiarQtyAderezo(${idx}, -1)" ${btnMinusDisabled ? 'disabled' : ''}>−</button>
                                     <span class="aderezo-card-qty-num" id="qty-num-${idx}">${count}</span>
-                                    <button type="button" class="btn-qty-card-mini" id="btn-plus-${idx}" onclick="cambiarQtyAderezo(${idx}, 1)">+</button>
+                                    <button type="button" class="btn-qty-card-mini" id="btn-plus-${idx}" onclick="cambiarQtyAderezo(${idx}, 1)" ${btnPlusDisabled ? 'disabled' : ''}>+</button>
                                 </div>
                             </div>
                         </div>
@@ -1186,7 +1187,7 @@
 
                 if (esMulticategoria) {
                     htmlFinal += `
-                        <div class="modal-seccion-categoria">
+                        <div class="modal-seccion-categoria ${!esBase && totalBase === 0 ? 'seccion-bloqueada' : ''}">
                             <div class="modal-seccion-header">
                                 <div class="modal-seccion-titulo-box">
                                     <span class="modal-seccion-icon">${icono}</span>
@@ -1213,18 +1214,67 @@
             container.innerHTML = htmlFinal;
         }
 
+        function cambiarQtyAderezo(idx, delta) {
+            if (!productoModalActual) return;
+            const actual = distribucionAderezos[idx] || 0;
+
+            if (delta > 0) {
+                // Verificar a qué categoría pertenece
+                let catDelItem = null;
+                let esBase = false;
+                for (const [catNombre, items] of Object.entries(gruposOpcionesActuales)) {
+                    const match = items.find(it => it.idx === idx);
+                    if (match) {
+                        catDelItem = catNombre;
+                        esBase = esCategoriaBase(catNombre, items);
+                        break;
+                    }
+                }
+
+                if (!esBase) {
+                    const totalBase = calcularTotalBaseSeleccionado();
+                    if (totalBase === 0) {
+                        mostrarFeedbackModal('Selecciona primero tus empanadas para saber cuántas bebidas y salsas puedes elegir.');
+                        return;
+                    }
+                    const itemsCat = gruposOpcionesActuales[catDelItem] || [];
+                    const totalCat = itemsCat.reduce((s, it) => s + (distribucionAderezos[it.idx] || 0), 0);
+                    if (totalCat >= totalBase) {
+                        mostrarFeedbackModal(`Has alcanzado el límite de ${totalBase} en ${catDelItem} (1 por cada empanada). Para elegir más, agrega más empanadas.`);
+                        return;
+                    }
+                }
+
+                distribucionAderezos[idx] = actual + 1;
+            } else if (delta < 0) {
+                if (actual > 0) {
+                    distribucionAderezos[idx] = actual - 1;
+                    // Si se redujo un item base, verificar que las bebidas/salsas no excedan el nuevo total
+                    ajustarAcompanamientosAlCupo();
+                }
+            }
+
+            renderizarTarjetasAderezosModal();
+            actualizarEstadoDistribucionModal();
+        }
+
+        function tocarTarjetaAderezo(idx) {
+            cambiarQtyAderezo(idx, 1);
+        }
+
         function calcularPrecioTotalModal() {
             if (!productoModalActual) return 0;
 
             let sumaProductosConPrecio = 0;
             let hayProductosConPrecio = false;
-            let totalUnidades = 0;
+            let totalBase = 0;
 
             for (const [catNombre, items] of Object.entries(gruposOpcionesActuales)) {
+                const esBase = esCategoriaBase(catNombre, items);
                 items.forEach(it => {
                     const count = distribucionAderezos[it.idx] || 0;
                     if (count > 0) {
-                        totalUnidades += count;
+                        if (esBase) totalBase += count;
                         const optProd = it.prod;
                         const optPrecio = (optProd && optProd.precio_usd !== null && !isNaN(optProd.precio_usd)) ? Number(optProd.precio_usd) : 0;
                         if (optPrecio > 0) {
@@ -1235,52 +1285,28 @@
                 });
             }
 
-            // Si aún no ha seleccionado ningún producto en el modal
-            if (totalUnidades === 0) {
+            if (totalBase === 0 && sumaProductosConPrecio === 0) {
                 return 0;
             }
 
-            // Suma directa de todos los productos que tienen precio (ej. 2 de $1 = $2; + bebida $3 = $5)
             if (hayProductosConPrecio && sumaProductosConPrecio > 0) {
                 return sumaProductosConPrecio;
             }
 
-            // Si los productos elegidos son gratuitos ($0.00), usa el precio base del combo si existe
             return Number(productoModalActual.precio_usd) || 0;
-        }
-
-        function tocarTarjetaAderezo(idx) {
-            if (!productoModalActual) return;
-            const countActual = distribucionAderezos[idx] || 0;
-            distribucionAderezos[idx] = countActual + 1;
-            renderizarTarjetasAderezosModal();
-            actualizarEstadoDistribucionModal();
-        }
-
-        function cambiarQtyAderezo(idx, delta) {
-            if (!productoModalActual) return;
-            const actual = distribucionAderezos[idx] || 0;
-            if (delta > 0) {
-                distribucionAderezos[idx] = actual + 1;
-            } else if (delta < 0) {
-                if (actual > 0) {
-                    distribucionAderezos[idx] = actual - 1;
-                }
-            }
-            renderizarTarjetasAderezosModal();
-            actualizarEstadoDistribucionModal();
         }
 
         function actualizarEstadoDistribucionModal() {
             const statusBox = document.getElementById('aderezo-status-box');
             if (!statusBox || !productoModalActual) return;
 
+            const totalBase = calcularTotalBaseSeleccionado();
             const precioTotal = calcularPrecioTotalModal();
             const partes = [];
-            let totalGeneral = 0;
 
             for (const [catNombre, items] of Object.entries(gruposOpcionesActuales)) {
                 const icono = obtenerIconoCategoria(catNombre);
+                const esBase = esCategoriaBase(catNombre, items);
                 const totalCat = items.reduce((s, it) => s + (distribucionAderezos[it.idx] || 0), 0);
                 const seleccionados = [];
 
@@ -1289,35 +1315,95 @@
                     if (count > 0) {
                         const optNombre = it.prod ? it.prod.nombre : it.opt.nombre;
                         seleccionados.push(`${optNombre} (x${count})`);
-                        totalGeneral += count;
                     }
                 });
 
                 if (seleccionados.length > 0) {
                     partes.push(`<strong>${icono} ${catNombre} (${totalCat}):</strong> ${seleccionados.join(', ')}`);
+                } else if (!esBase && totalBase > 0) {
+                    partes.push(`<strong>${icono} ${catNombre}:</strong> 0/${totalBase} elegidas`);
                 }
             }
 
-            const precioLiveHtml = `<div class="modal-precio-live-box"><span>Total Combo:</span><strong>$${precioTotal.toFixed(2)} (${formatearBs(precioTotal)})</strong></div>`;
+            const precioLiveHtml = `<div class="modal-precio-live-box"><span>Total:</span><strong>$${precioTotal.toFixed(2)} (${formatearBs(precioTotal)})</strong></div>`;
             const btnConfirmar = document.querySelector('.btn-confirmar-aderezo');
 
-            if (totalGeneral > 0) {
+            if (totalBase > 0) {
                 statusBox.className = 'aderezo-distribucion-status completo';
                 statusBox.innerHTML = `✅ ${partes.join(' • ')}${precioLiveHtml}`;
                 if (btnConfirmar) {
-                    btnConfirmar.innerHTML = `Agregar al carrito • $${precioTotal.toFixed(2)}`;
+                    const textoBtn = editandoItemKey ? `Guardar cambios • $${precioTotal.toFixed(2)}` : `Agregar al carrito • $${precioTotal.toFixed(2)}`;
+                    btnConfirmar.innerHTML = textoBtn;
                     btnConfirmar.disabled = false;
                     btnConfirmar.style.opacity = '1';
                 }
             } else {
                 statusBox.className = 'aderezo-distribucion-status incompleto';
-                statusBox.innerHTML = `⚠️ Selecciona tus empanadas, bebidas o salsas con los botones <strong>+</strong> y <strong>−</strong> de cada producto.${precioLiveHtml}`;
+                statusBox.innerHTML = `🥟 arma tu combo con los botones <strong>+</strong> y <strong>−</strong>.${precioLiveHtml}`;
                 if (btnConfirmar) {
-                    btnConfirmar.innerHTML = `Selecciona tus productos`;
+                    btnConfirmar.innerHTML = `Selecciona tus empanadas`;
                     btnConfirmar.disabled = true;
                     btnConfirmar.style.opacity = '0.65';
                 }
             }
+        }
+
+        function editarItemCombo(key) {
+            const item = carrito.find(i => (i.itemKey || i.id) == key);
+            if (!item) return;
+
+            const producto = productosOriginales.find(p => p.id === item.id);
+            if (!producto) return;
+
+            editandoItemKey = key;
+            productoModalActual = producto;
+            distribucionAderezos = {};
+            gruposOpcionesActuales = {};
+
+            const opciones = producto.opciones_incluidas || [];
+            if (!opciones || opciones.length === 0) return;
+
+            // Agrupar las opciones por categoría
+            opciones.forEach((opt, idx) => {
+                const optObj = typeof opt === 'object' ? opt : { id: idx, nombre: opt };
+                const optProd = buscarProductoOpcion(optObj);
+                const catNombre = (optProd && optProd.categoria_nombre) ? optProd.categoria_nombre : 'Sabores / Opciones';
+                if (!gruposOpcionesActuales[catNombre]) {
+                    gruposOpcionesActuales[catNombre] = [];
+                }
+                gruposOpcionesActuales[catNombre].push({
+                    opt: optObj,
+                    idx: idx,
+                    prod: optProd
+                });
+
+                // Cargar cantidad previa si existía en el desglose
+                let cantPrevia = 0;
+                if (item.desglose_por_categoria) {
+                    for (const catData of Object.values(item.desglose_por_categoria)) {
+                        if (catData.items) {
+                            const match = catData.items.find(it => {
+                                const mismoId = (it.id !== undefined && it.id !== null && it.id !== '' && optObj.id !== undefined && it.id == optObj.id);
+                                const mismoNombre = it.nombre && optObj.nombre && it.nombre.toLowerCase().trim() === optObj.nombre.toLowerCase().trim();
+                                const mismoNombreProd = optProd && it.nombre && optProd.nombre && it.nombre.toLowerCase().trim() === optProd.nombre.toLowerCase().trim();
+                                return mismoId || mismoNombre || mismoNombreProd;
+                            });
+                            if (match) {
+                                cantPrevia = Number(match.cantidad) || 0;
+                                break;
+                            }
+                        }
+                    }
+                }
+                distribucionAderezos[idx] = cantPrevia;
+            });
+
+            document.getElementById('aderezo-modal-prod-nombre').textContent = 'Editar ' + producto.nombre;
+
+            renderizarTarjetasAderezosModal();
+            actualizarEstadoDistribucionModal();
+
+            document.getElementById('aderezo-modal-overlay').classList.add('activo');
         }
 
         function cerrarModalAderezos() {
@@ -1325,11 +1411,18 @@
             productoModalActual = null;
             distribucionAderezos = {};
             gruposOpcionesActuales = {};
+            editandoItemKey = null;
         }
 
         function confirmarAgregarConAderezo() {
             if (!productoModalActual) {
                 cerrarModalAderezos();
+                return;
+            }
+
+            const totalBase = calcularTotalBaseSeleccionado();
+            if (totalBase === 0) {
+                alert('Por favor selecciona al menos una empanada con el botón + antes de agregar al carrito.');
                 return;
             }
 
@@ -1359,11 +1452,6 @@
                 }
             }
 
-            if (totalProductosElegidos === 0) {
-                alert('Por favor selecciona al menos un producto usando el botón + antes de agregar.');
-                return;
-            }
-
             const precioCalculado = calcularPrecioTotalModal();
 
             // Construir firma única para agrupar en el carrito
@@ -1381,21 +1469,33 @@
             });
             const resumenTexto = resumenLineas.join(' • ');
 
-            const existente = carrito.find(item => item.itemKey === itemKey);
-            if (existente) {
-                existente.cantidad += 1;
+            if (editandoItemKey) {
+                const index = carrito.findIndex(i => (i.itemKey || i.id) == editandoItemKey);
+                if (index !== -1) {
+                    carrito[index].itemKey = itemKey;
+                    carrito[index].precio_usd = precioCalculado;
+                    carrito[index].desglose_por_categoria = desgloseCategorias;
+                    carrito[index].opcion_seleccionada = resumenTexto;
+                    carrito[index].resumen_lineas = resumenLineas;
+                }
+                editandoItemKey = null;
             } else {
-                carrito.push({
-                    itemKey: itemKey,
-                    id: productoModalActual.id,
-                    nombre: productoModalActual.nombre,
-                    precio_usd: precioCalculado,
-                    cantidad: 1,
-                    imagen: productoModalActual.imagen || null,
-                    desglose_por_categoria: desgloseCategorias,
-                    opcion_seleccionada: resumenTexto,
-                    resumen_lineas: resumenLineas
-                });
+                const existente = carrito.find(item => item.itemKey === itemKey);
+                if (existente) {
+                    existente.cantidad += 1;
+                } else {
+                    carrito.push({
+                        itemKey: itemKey,
+                        id: productoModalActual.id,
+                        nombre: productoModalActual.nombre,
+                        precio_usd: precioCalculado,
+                        cantidad: 1,
+                        imagen: productoModalActual.imagen || null,
+                        desglose_por_categoria: desgloseCategorias,
+                        opcion_seleccionada: resumenTexto,
+                        resumen_lineas: resumenLineas
+                    });
+                }
             }
 
             cerrarModalAderezos();
@@ -1531,6 +1631,11 @@
                     opcionesHtml = `<div class="carrito-item-opcion"><span class="carrito-item-subgrupo">${item.opcion_seleccionada}</span></div>`;
                 }
 
+                const tieneDesglose = item.desglose_por_categoria || (item.resumen_lineas && item.resumen_lineas.length > 0) || item.opcion_seleccionada;
+                const botonEditarHtml = tieneDesglose
+                    ? `<button type="button" class="btn-editar-item-cart" onclick="editarItemCombo('${itemKey}')" title="Editar combo (cantidades y sabores)">✏️</button>`
+                    : '';
+
                 return `
                     <div class="carrito-item-panel" style="flex-direction:column; gap:6px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
@@ -1538,7 +1643,10 @@
                                 <span class="carrito-item-nombre">${item.nombre}</span>
                                 ${opcionesHtml}
                             </div>
-                            <button onclick="eliminarItem('${itemKey}')" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:1.1rem; padding:0 4px;" title="Eliminar">🗑️</button>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                ${botonEditarHtml}
+                                <button type="button" class="btn-eliminar-item-cart" onclick="eliminarItem('${itemKey}')" title="Eliminar del carrito">🗑️</button>
+                            </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <button onclick="disminuirCantidad('${itemKey}')" style="background:#444; color:white; border:none; width:26px; height:26px; border-radius:50%; font-size:0.9rem; cursor:pointer;">−</button>
@@ -1636,8 +1744,19 @@
                 return;
             }
 
+            const soloLetrasRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/;
+            if (!soloLetrasRegex.test(nombre)) {
+                alert('El nombre solo puede contener letras (sin números).');
+                return;
+            }
+
+            if (!soloLetrasRegex.test(apellido)) {
+                alert('El apellido solo puede contener letras (sin números).');
+                return;
+            }
+
             if (!/^\d+$/.test(telefono)) {
-                alert('El teléfono solo puede contener números.');
+                alert('El teléfono solo puede contener números (sin letras).');
                 return;
             }
 
@@ -1653,8 +1772,9 @@
 
             const direccion = document.getElementById('cliente-direccion').value.trim();
 
-            let mensaje = 'PEDIDO\n';
-            mensaje += 'PRODUCTOS:\n';
+            let mensaje = 'PEDIDO\n\n';
+
+            mensaje += 'PRODUCTOS:\n\n';
 
             // Lista de producto
             carrito.forEach(item => {
@@ -1682,7 +1802,7 @@
             });
             mensaje += '\n';
 
-            mensaje += 'PAGO:\n\n';
+            mensaje += '(PAGOS)\n\n';
 
             const subtotal = carrito.reduce((s, i) => s + i.precio_usd * i.cantidad, 0);
 
@@ -1693,7 +1813,7 @@
             }
             mensaje += `SUBTOTAL: \n$${subtotal.toFixed(2)} (${subtotalBS} Bs)\n`;
 
-            if (tipoEntrega === 'DELIVERY' && costoEnvio > 0) {
+            if (tipoEntrega.toLowerCase() === 'delivery' && costoEnvio > 0) {
                 let costoEnvioBS = '';
                 if (tasaBCV) {
                     costoEnvioBS = formatearBs(costoEnvio).replace('Bs ', '');
@@ -1711,19 +1831,19 @@
             mensaje += `TOTAL APROXIMADO: \n$${totalFinal.toFixed(2)} (${totalFinalBS} Bs)\n\n`;
 
             // Datos del cliente y entrega
-            mensaje += '👤 INFORMACION DEL CLIENTE\n\n';
+            mensaje += '(INFORMACION DEL CLIENTE)\n\n';
             if (nombre || apellido) mensaje += `NOMBRE: ${nombre} ${apellido}`.trim() + '\n';
             if (telefono) mensaje += `TELEFONO: ${telefono}\n`;
             if (pago) mensaje += `METODO DE PAGO: ${pago}\n`;
             mensaje += `TIPO DE ENTREGA: ${tipoEntrega === 'pickup' ? 'Pickup' : 'Delivery'}\n\n`;
 
-            if (tipoEntrega === 'delivery') {
-                mensaje += 'INFORMACION DEL ENVIO:\n\n';
+            if (tipoEntrega.toLowerCase() === 'delivery') {
+                mensaje += '(INFORMACION DEL ENVIO)\n\n';
                 if (direccion) mensaje += `Referencia: ${direccion}\n`;
                 mensaje += `DISTANCIA (estimada): ${distanciaKm.toFixed(2)} km\n`;
                 if (clienteLat && clienteLon) {
                     const googleMapsClientUrl = `https://maps.google.com/?q=${clienteLat},${clienteLon}`;
-                    mensaje += `UBICAICON DEL CLIENTE (MAPA): ${googleMapsClientUrl}\n`;
+                    mensaje += `UBICACION DEL CLIENTE (MAPA): ${googleMapsClientUrl}\n`;
                 }
             }
 
