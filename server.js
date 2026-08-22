@@ -11,18 +11,43 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ═══════════════════════════════════════════════
-// DIRECTORIOS Y ALMACENAMIENTO PERSISTENTE
+// DIRECTORIOS Y ALMACENAMIENTO PERSISTENTE (RENDER DISK /LOADSPRO)
 // ═══════════════════════════════════════════════
 const ROOT_DIR = __dirname;
-// Carpeta persistente para imágenes y base de datos (ideal para Render Persistent Disk)
-const LOADS_DIR = process.env.DATA_DIR || path.join(ROOT_DIR, 'loadspro');
+
+// Determinar ruta del disco persistente:
+// En Render / Linux se utiliza la ruta absoluta '/loadspro'.
+// Si se define DATA_DIR en las variables de entorno, tendrá prioridad.
+// En entornos locales donde no sea accesible /loadspro, se usa './loadspro' como fallback seguro.
+function getPersistentDirectory() {
+    if (process.env.DATA_DIR) {
+        return process.env.DATA_DIR;
+    }
+    // En Linux / Render, apuntar siempre a la ruta absoluta /loadspro
+    if (process.platform !== 'win32') {
+        return '/loadspro';
+    }
+    // En Windows local, intentar usar C:\loadspro o fallback a ./loadspro
+    try {
+        const winPath = path.resolve('/loadspro');
+        if (!fs.existsSync(winPath)) {
+            fs.mkdirSync(winPath, { recursive: true });
+        }
+        fs.accessSync(winPath, fs.constants.W_OK);
+        return winPath;
+    } catch (e) {
+        return path.join(ROOT_DIR, 'loadspro');
+    }
+}
+
+const LOADS_DIR = getPersistentDirectory();
 
 if (!fs.existsSync(LOADS_DIR)) {
     try {
         fs.mkdirSync(LOADS_DIR, { recursive: true });
-        console.log('✅ Carpeta persistente loadspro creada en:', LOADS_DIR);
+        console.log('✅ Carpeta persistente /loadspro creada en:', LOADS_DIR);
     } catch (error) {
-        console.error('❌ No se pudo crear la carpeta loadspro:', error.message);
+        console.error('❌ No se pudo crear la carpeta persistente:', error.message);
         process.exit(1);
     }
 }
@@ -32,32 +57,58 @@ try {
     const testFile = path.join(LOADS_DIR, '.test_write');
     fs.writeFileSync(testFile, 'test');
     fs.unlinkSync(testFile);
-    console.log('✅ Permisos de escritura en loadspro correctos');
+    console.log('✅ Permisos de escritura en disco persistente (/loadspro) correctos:', LOADS_DIR);
 } catch (error) {
     console.error('❌ No se tienen permisos de escritura en', LOADS_DIR);
-    console.error('Ejecutá el servidor con permisos adecuados o cambiá los permisos de la carpeta.');
+    console.error('Verificá los permisos del disco persistente en Render.');
     process.exit(1);
 }
 
 // ═══════════════════════════════════════════════
-// BASE DE DATOS (DENTRO DE LOADSPRO)
+// BASE DE DATOS PERSISTENTE (DENTRO DE /LOADSPRO)
 // ═══════════════════════════════════════════════
 const DB_PATH = path.join(LOADS_DIR, 'productos.db');
-const OLD_DB_PATH = path.join(ROOT_DIR, 'productos.db');
+const OLD_ROOT_DB_PATH = path.join(ROOT_DIR, 'productos.db');
+const OLD_LOCAL_LOADS_DB_PATH = path.join(ROOT_DIR, 'loadspro', 'productos.db');
 
-// Migración automática si existe una base de datos previa en la raíz y no en loadspro
-if (!fs.existsSync(DB_PATH) && fs.existsSync(OLD_DB_PATH)) {
+// Migración automática de base de datos previa al disco persistente si no existe aún
+if (!fs.existsSync(DB_PATH)) {
+    const candidateDb = fs.existsSync(OLD_LOCAL_LOADS_DB_PATH)
+        ? OLD_LOCAL_LOADS_DB_PATH
+        : (fs.existsSync(OLD_ROOT_DB_PATH) ? OLD_ROOT_DB_PATH : null);
+
+    if (candidateDb && path.resolve(candidateDb) !== path.resolve(DB_PATH)) {
+        try {
+            fs.copyFileSync(candidateDb, DB_PATH);
+            console.log(`📦 Base de datos copiada exitosamente desde ${candidateDb} a ${DB_PATH}`);
+            if (fs.existsSync(candidateDb + '-wal')) {
+                try { fs.copyFileSync(candidateDb + '-wal', DB_PATH + '-wal'); } catch(e){}
+            }
+            if (fs.existsSync(candidateDb + '-shm')) {
+                try { fs.copyFileSync(candidateDb + '-shm', DB_PATH + '-shm'); } catch(e){}
+            }
+        } catch (err) {
+            console.error('⚠️ Error al migrar base de datos a /loadspro:', err.message);
+        }
+    }
+}
+
+// Migración de imágenes previas de la carpeta local al disco persistente si son carpetas distintas
+const localLoadsDir = path.join(ROOT_DIR, 'loadspro');
+if (path.resolve(localLoadsDir) !== path.resolve(LOADS_DIR) && fs.existsSync(localLoadsDir)) {
     try {
-        fs.copyFileSync(OLD_DB_PATH, DB_PATH);
-        console.log('📦 Base de datos copiada exitosamente a loadspro/productos.db');
-        if (fs.existsSync(OLD_DB_PATH + '-wal')) {
-            try { fs.copyFileSync(OLD_DB_PATH + '-wal', DB_PATH + '-wal'); } catch(e){}
+        const files = fs.readdirSync(localLoadsDir);
+        for (const file of files) {
+            if (file.endsWith('.db') || file.endsWith('.db-wal') || file.endsWith('.db-shm') || file.startsWith('.')) continue;
+            const srcFile = path.join(localLoadsDir, file);
+            const destFile = path.join(LOADS_DIR, file);
+            if (!fs.existsSync(destFile) && fs.statSync(srcFile).isFile()) {
+                fs.copyFileSync(srcFile, destFile);
+                console.log(`🖼️ Imagen migrada a disco persistente (${LOADS_DIR}): ${file}`);
+            }
         }
-        if (fs.existsSync(OLD_DB_PATH + '-shm')) {
-            try { fs.copyFileSync(OLD_DB_PATH + '-shm', DB_PATH + '-shm'); } catch(e){}
-        }
-    } catch (err) {
-        console.error('⚠️ Error al migrar base de datos a loadspro:', err.message);
+    } catch (e) {
+        console.warn('⚠️ No se pudieron migrar imágenes locales al disco persistente:', e.message);
     }
 }
 
@@ -78,7 +129,7 @@ app.use((req, res, next) => {
     if (!acceptEncoding.includes('gzip')) return next();
 
     const originalJson = res.json.bind(res);
-    res.json = function(body) {
+    res.json = function (body) {
         const jsonStr = JSON.stringify(body);
         if (jsonStr.length < 512) {
             return originalJson(body);
@@ -316,7 +367,7 @@ function normalizarOpcionesStr(val) {
             const parsed = JSON.parse(trimmed);
             if (Array.isArray(parsed) && parsed.length === 0) return null;
             return JSON.stringify(parsed);
-        } catch(e) {
+        } catch (e) {
             return trimmed;
         }
     }
@@ -346,12 +397,12 @@ app.post('/api/productos', noCache, uploadMiddleware, (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(nombre, precioNum, caracteristica, imagen, catId, entrega, opcionesStr);
-    res.status(201).json({ 
-        id: result.lastInsertRowid, 
-        nombre, 
-        precio_usd: precioNum, 
-        caracteristica, 
-        imagen, 
+    res.status(201).json({
+        id: result.lastInsertRowid,
+        nombre,
+        precio_usd: precioNum,
+        caracteristica,
+        imagen,
         categoria_id: catId,
         tipo_entrega: entrega,
         opciones_incluidas: opcionesStr ? JSON.parse(opcionesStr) : null
@@ -379,7 +430,7 @@ app.put('/api/productos/:id', noCache, uploadMiddleware, (req, res) => {
         if (prodAnterior && prodAnterior.imagen) {
             const imgPath = path.join(LOADS_DIR, prodAnterior.imagen);
             if (fs.existsSync(imgPath)) {
-                try { fs.unlinkSync(imgPath); } catch(e){}
+                try { fs.unlinkSync(imgPath); } catch (e) { }
             }
         }
 
@@ -393,7 +444,7 @@ app.put('/api/productos/:id', noCache, uploadMiddleware, (req, res) => {
         if (prodAnterior && prodAnterior.imagen) {
             const imgPath = path.join(LOADS_DIR, prodAnterior.imagen);
             if (fs.existsSync(imgPath)) {
-                try { fs.unlinkSync(imgPath); } catch(e){}
+                try { fs.unlinkSync(imgPath); } catch (e) { }
             }
         }
 
@@ -419,7 +470,7 @@ app.delete('/api/productos/:id', noCache, (req, res) => {
     if (prodAnterior && prodAnterior.imagen) {
         const imgPath = path.join(LOADS_DIR, prodAnterior.imagen);
         if (fs.existsSync(imgPath)) {
-            try { fs.unlinkSync(imgPath); } catch(e){}
+            try { fs.unlinkSync(imgPath); } catch (e) { }
         }
     }
     db.prepare('DELETE FROM productos WHERE id=?').run(id);
@@ -457,7 +508,7 @@ async function obtenerTasaServidor() {
             lastBcvFetchTime = now;
             return { modo: 'auto', tasa: cachedBcvRate };
         }
-    } catch(e) {
+    } catch (e) {
         try {
             const resp2 = await fetch('https://api.bcv-api.xyz/v1/dolar', { signal: AbortSignal.timeout(4000) });
             const data2 = await resp2.json();
@@ -467,7 +518,7 @@ async function obtenerTasaServidor() {
                 lastBcvFetchTime = now;
                 return { modo: 'auto', tasa: cachedBcvRate };
             }
-        } catch(e2) {}
+        } catch (e2) { }
     }
 
     return { modo: 'auto', tasa: cachedBcvRate || manualVal || 775.00 };
@@ -478,7 +529,7 @@ app.get('/api/tasa', noCache, async (req, res) => {
     try {
         const resultado = await obtenerTasaServidor();
         res.json(resultado);
-    } catch(e) {
+    } catch (e) {
         res.json({ modo: 'auto', tasa: 775.00 });
     }
 });
